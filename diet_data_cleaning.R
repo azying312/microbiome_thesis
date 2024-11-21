@@ -64,6 +64,7 @@ print(unique(missing_list$biome_id))
 # dropped_ids_list <- list()
 
 # 25 - missing serving
+# food_other is filtered out
 onerow<-function(dh, row){ 
   #print(row) #only important for de-bugging
   temp<-dh[row,"foods"]
@@ -78,21 +79,6 @@ onerow<-function(dh, row){
   temp5<-temp4[isnumber]
   temp5 <- gsub("\\n", "", temp5)
   
-  # # This code assumes that uneven number of entries is because serving size was null
-  # if(length(temp5)%%2!=0) { #len() of temp 5 needed to be even
-  #   print("uneven number of entries")
-  #   temp3<-gsub("null","1", temp3)
-  #   temp4<-unlist(strsplit(temp3, " "))
-  #   isnumber<-grepl("[0-9]", temp4)
-  #   temp5<-temp4[isnumber]
-  #   if(length(temp5)%%2!=0) print("still uneven number")
-  # }
-  # 
-  # for (jj in seq(1, length(temp5), by = 2)) {
-  #   id <- gsub("foodsid|id", "", temp5[jj])  # Clean ID
-  #   serving <- ifelse(jj + 1 <= length(temp5), gsub("servings", "", temp5[jj + 1]), NA)  # Clean serving
-  # }
-  
   if (length(temp5)==0) return (data.frame())
   
   ids <- gsub("foodsid","", temp5[seq(1,length(temp5)-1, 2)])
@@ -100,32 +86,6 @@ onerow<-function(dh, row){
   
   servings<-gsub("servings","",temp5[seq(2,length(temp5),2)])
   
-  # Get the dessert and beverage ids
-  # bd_vector <- ids[ids %in% avi_bd_data$ID]
-  # if (length(bd_vector) == 0) {
-  #   # Create a data frame with NA values if no matching IDs
-  #   bd_df <- data.frame(
-  #     biome_id = as.character(dh$biome_id[row]),  # Ensure character type
-  #     logDate = as.character(dh$logDate[row]),    # Ensure character type
-  #     id = NA,                                    # NA for id
-  #     servings = NA,                              # NA for servings
-  #     stringsAsFactors = FALSE
-  #   )
-  # } else {
-  #   # Create bd_df with matched IDs
-  #   bd_df <- data.frame(
-  #     biome_id = as.character(dh$biome_id[row]),  # Ensure character type
-  #     logDate = as.character(dh$logDate[row]),    # Ensure character type
-  #     id = as.character(bd_vector),                # Ensure character type
-  #     servings = as.character(servings[ids %in% avi_bd_data$ID]),  # Ensure character type
-  #     stringsAsFactors = FALSE
-  #   )
-  # }
-  # 
-  # dropped_ids_list <<- append(dropped_ids_list, list(bd_df))
-  # 
-  # ids <- as.numeric(gsub("id","",ids)) # at this step beverages & desserts become NA
-
   #running for loop because some ids appear multiple times in one day, and 
   ## some food ids aren't in the avi dataset
   noserving <- c()
@@ -173,23 +133,6 @@ for(ii in 1:nrow(studyID_dh_data)) {
 colnames(big)[1] <- "study_id"
 colnames(big)[2] <- "Date"
 
-# head(big)
-# dim(big) # 8928
-
-# Dropped IDs
-# dropped_ids <- do.call(rbind, dropped_ids_list) # 4489
-
-# Add Nutrition info from AVI for beverage and dessert
-# dropped_ids_merged <- dropped_ids %>%
-#   left_join(avi_bd_data, by = c("id" = "ID"))
-
-# Map to numeric IDs
-# bd_ids_merged <- big %>% 
-#   left_join(bd_mapping, by = "id")
-# dropped_ids_merged <- dropped_ids_merged %>% 
-#   mutate(id=new_id) %>% 
-#   select(-new_id)
-
 ## Use BDNutrition Numerical IDs
 big <- big %>%
   left_join(bd_mapping, by = "id") %>%
@@ -197,87 +140,6 @@ big <- big %>%
   select(-new_id)
 # Change IDs back to numeric
 big$id <- as.numeric(big$id)
-
-### Add food other ------------------
-# food_other
-# Parse food_other
-studyID_dh_data$food_other_2 <- lapply(seq_len(nrow(original_dh_data)), function(i) {
-  # Skip rows with no "food_other:
-  if (original_dh_data$food_other[i] == "[]") {
-    return(NULL)  
-  }
-  # Parse the JSON data
-  food_other_parsed <- as.data.frame(fromJSON(original_dh_data$food_other[i]))
-  # Create a new column for study_id and logDate
-  food_other_parsed$study_id <- studyID_dh_data$biome_id[i]
-  food_other_parsed$logDate <- studyID_dh_data$logDate[i]
-  
-  return(food_other_parsed)
-})
-
-# Make food_other DF
-food_other_df <- data.frame(
-  study_id = numeric(),
-  logDate = character(),
-  type = character(),
-  place = character(),
-  foods = character(),
-  stringsAsFactors = FALSE
-)
-
-# Iterate through each row of dh
-for (i in 1:nrow(studyID_dh_data)) {
-  x <- studyID_dh_data$food_other_2[i][[1]]
-  
-  # Check if there are foods
-  if (!all(x$foods == ""))  {
-    # Create a df for the current row
-    # print(i)
-    df <- data.frame(
-      study_id = studyID_dh_data$biome_id[i],
-      logDate = studyID_dh_data$logDate[i],
-      type = c(x$type),
-      place = ifelse(is.null(x$place), NA, c(x$place)),
-      foods = c(x$foods)
-    )
-    
-    # append the df to food_other_df
-    food_other_df <- rbind(food_other_df, df)
-  }
-}
-
-## Clean up food_other df
-colnames(food_other_df)[1] <- "study_id"
-colnames(food_other_df)[2] <- "Date"
-colnames(food_other_df)[5] <- "name"
-food_other_df$place[food_other_df$place == ""] <- as.character(NA)
-
-# Filter out dessert and drinks for now
-# food_other_bd <- food_other_df %>% 
-#   filter(type %in% c("beverage", "dessert"))
-# food_other_df_cleaned <- food_other_df %>%
-#   filter(name != "") %>% 
-#   filter(!(type %in% c("beverage", "dessert")))
-food_other_df_cleaned <- food_other_df
-
-### Append big and food_other
-food_other_df_cleaned <- food_other_df_cleaned %>%
-  mutate(food_other = TRUE)
-big <- big %>%
-  mutate(food_other = FALSE)
-big <- bind_rows(big, food_other_df_cleaned)
-# big$id <- as.character(big$id)
-
-# Bind the drinks and desserts
-# dropped_ids_merged <- dropped_ids_merged %>% 
-#   # select(-c(Source, Notes)) %>% 
-#   rename("study_id" = "biome_id") %>% 
-#   rename(Date=logDate) %>% 
-#   mutate(place = NA) %>%
-#   mutate(food_other = FALSE)
-# Note: type for the dropped_ids was not kept
-
-# big <- bind_rows(big, dropped_ids_merged)
 
 # Multiply all vars by # of servings --------------------
 big$caloriesall<-big$calories*as.numeric(big$servings)
@@ -293,6 +155,31 @@ big$sugarsall<-big$sugars*as.numeric(big$servings)
 big$addedSugarall<-big$addedSugar*as.numeric(big$servings)
 big$proteinall<-big$protein*as.numeric(big$servings)
 big$fatall<-big$fat*as.numeric(big$servings)
+
+### Add food other ------------------
+
+## Clean up food_other df - hand cleaned
+food_other_df <- food_other %>% 
+  filter(IS_DUPE==FALSE) %>% 
+  filter(food_other==TRUE) %>% 
+  select(!c(Assigner, Comments.Column, IS_DUPE, servings)) %>% 
+  # set servings
+  rename(servings=serving.size) %>% 
+  mutate(servings=ifelse(!grepl("^[0-9]+$", servings), 1, servings)) %>% 
+  # clean df
+  filter(!is.na(study_id)) %>% 
+  filter(!is.na(name)) %>% 
+  filter(!is.na(Date)) %>% 
+  # get rid of all NA cols
+  select(where(~ !all(is.na(.)))) 
+
+### Append big and food_other
+food_other_df_cleaned <- food_other_df %>%
+  mutate(food_other = TRUE)
+big <- big %>%
+  mutate(food_other = FALSE) %>% 
+  mutate(caloriesFromSatFat=as.numeric(caloriesFromSatFat))
+big <- bind_rows(big, food_other_df_cleaned)
 
 # Clean up big df
 big_cleaned <- big %>% 
@@ -358,41 +245,23 @@ studyID_bitesnap_data <- studyID_bitesnap_data %>%
   rename("saturatedFatall" = "saturatedFat") %>%
   rename("addedSugarall" = "addedSugars")
 
-# common <- intersect(colnames(big_cleaned), colnames(studyID_bitesnap_data))
-# final_columns <- c(common, c("caloriesFromFat", "saturatedFat", "caloriesFromSatFat", "place"))
-
-# studyID_bitesnap_data$id <- as.character(studyID_bitesnap_data$id)
 m <- bind_rows(studyID_bitesnap_data, big_cleaned) 
-# %>%
-#   select(all_of(final_columns))
 
 # Clean up merged df
 m_cleaned <- m %>% 
   select(c("study_id","Date","type","servings","id","name","caloriesall","cholesterolall","saturatedFatall","sodiumall",
            "carbohydratesall","dietaryFiberall","sugarsall","proteinall","fatall","caloriesFromFat","saturatedFat",
            "caloriesFromSatFat","transFat","addedSugarall","food_other","place", everything()))
-# 
-# sum(is.na(m_cleaned$type))
-# length(m_cleaned$type)
-# dim(m_cleaned)
-# 
-# bitesnap_names <- names(studyID_bitesnap_data)
-# avi_names <- names(big_cleaned)
-# merged_names <- names(m_cleaned)
-# 
-# # Elements in list1 but not in list2
-# merged_names[!merged_names %in% bitesnap_names]
-# # m_cleaned$study_id <- as.numeric(m_cleaned$study_id)
-# # sum(is.na(m_cleaned$study_id))
-
-# Remove rows with NA in the "study_id" column
-# m_cleaned <- m_cleaned %>% filter(!is.na(study_id))
 
 m_cleaned$caloriesFromSatFat <- as.numeric(m_cleaned$caloriesFromSatFat)
 
+m_cleaned <- m_cleaned %>% 
+  select(where(~ !all(is.na(.)))) %>% 
+  filter(m_cleaned$name!="")
+
 ### Save final data output
 write.csv(m_cleaned,
-          file = "/Users/alicezhang/Desktop/microbiome_data/premanual_merged_diet_data.csv",
+          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/manual_merged_diet_data.csv",
           row.names = FALSE)
 
 ################################################################################################

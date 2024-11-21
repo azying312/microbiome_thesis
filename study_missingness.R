@@ -344,15 +344,15 @@ missingness_long_count <- missingness_long_count %>%
     biome_ids = factor(biome_ids, levels = rev(unique(biome_ids)))
   )
 
-# missingness_long_count <- missingness_long_count %>%
-#   mutate(
-#     Variable = factor(Variable, levels = c("Volunteer Survey", "DASS (%)",
-#                                            "Physical Activity (%)", "Sleep Data (%)",
-#                                            "Vaginal (%)", "Gut (%)", "Diet Data (% days)", "Diet Data (% meals)",
-#                                            "Menses Data", "Sexual Activity (%)"
-#                                            )),
-#     biome_ids = factor(biome_ids, levels = rev(unique(biome_ids)))
-#   )
+missingness_long_count <- missingness_long_count %>%
+  mutate(
+    Variable = factor(Variable, levels = c("Volunteer Survey", "DASS (%)",
+                                           "Physical Activity (%)", "Sleep Data (%)",
+                                           "Vaginal (%)", "Gut (%)", "Diet Data (% days)", "Diet Data (% meals)",
+                                           "Menses Data", "Sexual Activity (%)"
+                                           )),
+    biome_ids = factor(biome_ids, levels = rev(unique(biome_ids)))
+  )
 
 # Missingness Plot
 ggplot(missingness_long_count, aes(x = Variable, y = biome_ids, fill = Missing)) +
@@ -379,29 +379,3 @@ ggplot(missingness_long_samples, aes(x = Variable, y = factor(biome_ids), fill =
        fill = "Percentage") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) 
-
-# DASS # Missingness Plot
-# missingness_long_DASS<- missingness_long %>% 
-#   filter(Variable=="DASS (%)")
-# ggplot(missingness_long_DASS, aes(x = Variable, y = factor(biome_ids), fill = Missing)) +
-#   geom_tile(color = "gray25") +
-#   scale_fill_viridis_c(option = "viridis", direction=-1,
-#                        na.value = "grey50") +
-#   labs(title = "DASS Missingness Heatmap", 
-#        x = "Data Type", 
-#        y = "Study ID", 
-#        fill = "Percentage") +
-#   theme_minimal() +
-#   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) 
-
-# # Missingness Plot - Binary
-# ggplot(missingness_long_bin, aes(x = Variable, y = factor(biome_ids), fill = factor(Missing))) +
-#   geom_tile(color = "black") +
-#   scale_fill_manual(values = c("white", "black"), 
-#                     na.value = "white") +  # Specify colors for binary values
-#   labs(title = "Missingness Heatmap", 
-#        x = "Variable", 
-#        y = "Biome ID", 
-#        fill = "Missingness") +  # Adjust labels as needed
-#   theme_minimal() +
-#   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))

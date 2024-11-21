@@ -34,7 +34,7 @@ missing_list <- med_data %>%
   filter(is.na(as.numeric(biome_id)))
 print(unique(missing_list$biome_id))
 
-dim(med_data)
+View(med_data)
 
 ### Save final data output
 write.csv(med_data,
