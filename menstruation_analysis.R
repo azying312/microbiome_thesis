@@ -8,9 +8,9 @@
 library(tidyverse)
 
 full_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
-survey_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/alice_cleaned_survey_data.csv", header=TRUE)
+survey_data_full <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
-survey_data <- survey_data %>% 
+survey_data <- survey_data_full %>% 
   select(biome_id, menstruate) %>%
   rename(survey_menstruate=menstruate) # 14 no, 54 yes
 
@@ -201,6 +201,27 @@ ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating
 
 # Plot 2.5: Ppl who say no menses
 person_says_no_menses_ids <- unique(person_says_no_menses$biome_id)
+
+no_menses_data <- person_says_no_menses %>% 
+  group_by(biome_id) %>% 
+  summarise(
+    has_menses = if_else(any(menstruation == 1 | uMinn_menstruation == 1), 1, 0)
+  ) %>% 
+  ungroup()
+
+## Survey data
+survey_data_subset <- survey_data_full %>% 
+  filter(biome_id %in% person_says_no_menses_ids) %>% 
+  select(biome_id, activity_level, student_athelete, taken_antibiotics, meds,
+         vag_infection, menstruate, regular_periods, If.irregular..please.elaborate.on.the.frequency.,
+         What.is.the.number.of.days.in.your.monthly.cycle..that.is..how.many.days.are.there.from.the.first.day.of.one.period.to.the.first.day.of.your.next.period...,
+         menstrual_prod, vaginal_notes, menstrual_cup, tampon, pad, no_menstrual_product) %>% 
+  full_join(no_menses_data) %>% 
+  filter(has_menses==1) %>% 
+  select(has_menses, everything())
+
+##
+
 person_says_no_menses <- full_data %>%
   filter(biome_id %in% person_says_no_menses_ids) %>% 
   filter(as.Date(logDate) < as.Date("2022-12-15")) %>% 
@@ -235,7 +256,6 @@ ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating
        fill = "Menstruation Scale") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
-
 
 ### Reconstruct cycles
 
@@ -755,12 +775,12 @@ ggplot(relative_day_heatmap_data,
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
 
 ## Plot: Map to impute from Uminn sample & menses relative day 1 - order by num samples
+
 ggplot(relative_day_heatmap_data, 
        aes(x = RelativeDay,
            y=reorder(factor(biome_id), sample_count),
-           # y = reorder(factor(biome_id), menstruating_days_count), 
            fill = factor(menstruation_status)))+
-  geom_tile(color = "gray25") +
+  geom_tile(color = "gray25") + 
   scale_fill_manual(values = c("1" = "red", "2" = "maroon", "3" = "darkred", 
                                "4"="lightblue", "5"="darkblue","6"="blue",
                                "7"="pink","8"="gray",
@@ -781,6 +801,65 @@ ggplot(relative_day_heatmap_data,
        fill = "Menstruation Status") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+
+## Cut participants 
+# from samples_analysis.R
+(ids15)
+unique(no_menses_data$biome_id)
+# ids15
+# 
+# relative_day_heatmap_data <- heatmap_data %>%
+#   mutate(logDate = as.Date(logDate)) %>% 
+#   group_by(biome_id) %>%
+#   arrange(logDate) %>%
+#   # filter out ppl with no menses at all
+#   # filter(any(menstruation_status %in% c(1, 2, 3, 7))) %>% 
+#   # filter ppl
+#   filter(biome_id %in% ids15) %>% 
+#   # Identify the earliest logDate where we have sample
+#   mutate(first_sample_day = min(logDate[menstruation_status %in% c(1, 3, 5, 6, 7)], na.rm = TRUE),
+#          first_menstruating_day = min(logDate[Value == "Menstruating"], na.rm = TRUE))%>%
+#   # set first menstruating day to first data day if no menses
+#   mutate(first_menstruating_day = ifelse((first_menstruating_day==Inf), first_sample_day, first_menstruating_day)) %>%
+#   # filter if no data before first menses report
+#   filter(logDate >= first_sample_day | 
+#            (logDate < first_sample_day & !is.na(menstruation_status))) %>%
+#   # Calculate RelativeDay with potential negative values
+#   mutate(RelativeDay = as.numeric(logDate - first_menstruating_day)) %>%
+#   ungroup() %>% 
+#   group_by(biome_id) %>%
+#   # Count menstruating days for sorting
+#   mutate(menstruating_days_count = sum(Value == "Menstruating", na.rm = TRUE),
+#          sample_count=sum(menstruation_status %in% c(1,3,5,6,7), na.rm=TRUE)) %>%
+#   ungroup() %>%
+#   arrange(desc(menstruating_days_count), desc(sample_count), biome_id)
+# 
+# ggplot(relative_day_heatmap_data, 
+#        aes(x = RelativeDay,
+#            y=reorder(factor(biome_id), sample_count),
+#            fill = factor(menstruation_status)))+
+#   geom_tile(color = "gray25") + 
+#   scale_fill_manual(values = c("1" = "red", "2" = "maroon", "3" = "darkred", 
+#                                "4"="lightblue", "5"="darkblue","6"="blue",
+#                                "7"="pink","8"="gray",
+#                                "NA" = "white"),  # NA - technically can impute these?
+#                     labels = c("1" = "Blood UMinn Sample", 
+#                                "2" = "User Input Menses", 
+#                                "3" = "Both Sources Menses", 
+#                                "4"="User Input no Menses, no Sample",
+#                                "5"="Both Sources no Menses",
+#                                "6"="No Blood Sample and no User Input",
+#                                "7"="User Input Menses, no Blood Sample",
+#                                "8"="No data",
+#                                "NA" = "Missing"), 
+#                     na.value = "white") +
+#   labs(title = "Menstruation Heatmap by Identifier", 
+#        x = "Relative Day from Menstruation Day 1", 
+#        y = "Biome ID", 
+#        fill = "Menstruation Status") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+# 
 
 ### Plot: days to impute
 

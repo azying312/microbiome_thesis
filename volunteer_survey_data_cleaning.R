@@ -49,6 +49,8 @@ activity_scale <- c("Sedentary (little to no exercise/physical activity)",
                     "Moderately active (4-6 hours of physical exercise per week)",
                     "Very active (7+ hours of physical exercise per week)")
 
+
+
 history_data_recode <- history_data %>% 
   # Clean menstruate variable
   rename(menstruate=Do.you.menstruate...Choose.one.) %>% 
@@ -86,7 +88,27 @@ history_data_recode <- history_data %>%
     dietary_habits
       %in% c("Vegetarian and Gluten Free", "Vegetarian") ~ "Vegetarian",
     TRUE ~ dietary_habits
-  ))
+  )) %>% 
+  # meds
+  rename(meds=Are.you.currently.taking.any.hormonal.medications.and.or.birth.control...Indicate.all.that.apply.) %>%
+  # regular periods
+  rename(regular_periods=Do.you.have.regular.periods..every.21.to.35.days.and.last.2.to.7.days..or.irregular.periods...Choose.one.) %>% 
+  mutate(regular_periods=ifelse(regular_periods=="Regular", 1, 
+                                ifelse(regular_periods=="Irregular", 0, NA))) %>%
+  # vagina bacterial infection
+  rename(vag_infection=Have.you.ever.been.diagnosed.with.vaginal.bacterial.infection..vaginosis..) %>%
+  mutate(vag_infection=ifelse(vag_infection=="Yes", 1,
+                                ifelse(vag_infection=="60", 0, NA))) %>%
+  # menstrual products
+  rename(menstrual_prod=Which.menstrual.products.do.you.typically.use...Select.all.that.apply.) %>%
+  mutate(
+    menstrual_cup=ifelse(str_detect(menstrual_prod, "Menstrual Cup"), 1, 0),
+    tampon=ifelse(str_detect(menstrual_prod, "Tampons"), 1, 0),
+    pad=ifelse(str_detect(menstrual_prod, "Pads"), 1, 0),
+    no_menstrual_product=ifelse(str_detect(menstrual_prod, "none"), 1, 0)
+  ) %>% 
+  # notes about period
+  rename(vaginal_notes=If.you.would.like.to.report.any.other.condition.or.event.related.to.vaginal.health.and.or.menstruation.that.you.think.may.be.relevant.to.the.study..please.do.so.in.the.space.below.)
 
 table(history_data_recode$dietary_habits)
 history_data_recode$logDate

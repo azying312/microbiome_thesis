@@ -34,6 +34,11 @@ missing_list <- samples_data %>%
   filter(is.na(as.numeric(biome_id)))
 print(unique(missing_list$biome_id))
 
+# Fix log dates
+samples_data <- samples_data %>% 
+  mutate(logDate = as.Date(timestamp),
+       timestamp = as.POSIXct(timestamp, format = "%Y-%m-%d %H:%M:%S"))
+
 dim(samples_data)
 
 write.csv(samples_data,

@@ -359,7 +359,7 @@ ggplot(missingness_long_count, aes(x = Variable, y = biome_ids, fill = Missing))
   geom_tile(color = "gray25") +
   scale_fill_viridis_c(option = "viridis", direction=-1,
                        na.value = "grey50") +
-  labs(title = "Missingness Heatmap", 
+  labs(title = "Study Completion Heatmap", 
        x = "\n Data Type", 
        y = "Study ID \n", 
        fill = "Percentage") +
@@ -373,7 +373,7 @@ ggplot(missingness_long_samples, aes(x = Variable, y = factor(biome_ids), fill =
   geom_tile(color = "gray25") +
   scale_fill_viridis_c(option = "viridis", direction=-1,
                        na.value = "grey50") +
-  labs(title = "Samples Missingness Heatmap", 
+  labs(title = "Samples Completion Heatmap", 
        x = "Data Type", 
        y = "Study ID", 
        fill = "Percentage") +
