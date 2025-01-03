@@ -3,7 +3,7 @@ packs <- c("tidyverse")
 lapply(packs, require, character.only = TRUE)
 
 ## Load Data
-merged_diet_data <- read_csv("/Users/alicezhang/Desktop/microbiome_data/alice_fully_merged_diet_data.csv")
+merged_diet_data <- read_csv("/Users/alicezhang/Desktop/microbiome_data/manual_merged_diet_data.csv")
 names(merged_diet_data)
 
 # food_other is true
@@ -31,3 +31,28 @@ randomized_check_dupes <- check_dupes %>%
 write.csv(randomized_check_dupes,
           file = "/Users/alicezhang/Desktop/microbiome_data/check_dupes_diet_data.csv",
           row.names = FALSE)
+
+### Save file with non-dupe data
+not_in_dupes <- merged_diet_data %>%
+  anti_join(check_dupes, by = c("study_id", "Date", "type"))
+write.csv(not_in_dupes,
+          file = "/Users/alicezhang/Desktop/microbiome_data/no_dupes_diet_data.csv",
+          row.names = FALSE)
+
+## Input missing nutrition info
+no_nutrition_info <- merged_diet_data %>% 
+  filter(is.na(caloriesall)) %>% 
+  distinct(name, .keep_all = TRUE)
+
+write.csv(no_nutrition_info,
+          file = "/Users/alicezhang/Desktop/microbiome_data/no_nutrition.csv",
+          row.names = FALSE)
+
+## Input type==other
+type_other <- merged_diet_data %>% 
+  filter(type=="other")
+
+write.csv(type_other,
+          file = "/Users/alicezhang/Desktop/microbiome_data/type_other_diet_data.csv",
+          row.names = FALSE)
+

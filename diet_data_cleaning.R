@@ -15,7 +15,7 @@ avi_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/AVI Foods (corre
 id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 original_bitesnap_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Bitesnap-filtered - Bitesnap-filtered.csv", header = TRUE)
 avi_bd_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/BDNutrition - Sheet1.csv", header = TRUE)
-bd_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/BDNutrition - Mapping.csv", header = TRUE)
+bd_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/BDNutrition - Sheet3.csv", header = TRUE)
 food_other <- read.csv("/Users/alicezhang/Desktop/microbiome_data/food_other.csv", header = TRUE)
 
 ## Merge avi_data and avi_bd_data
@@ -230,6 +230,10 @@ studyID_bitesnap_data$type[studyID_bitesnap_data$times >= "11:00:00" & studyID_b
 studyID_bitesnap_data$type[studyID_bitesnap_data$times >= "15:00:00" & studyID_bitesnap_data$times <= "23:59:59"] <- "dinner" #3 to 12
 table(studyID_bitesnap_data$type)
 
+# other_type <- studyID_bitesnap_data %>%
+#   filter(type=="other")
+# other_type$times
+# other_type$study_id
 # Rename bitesnap_data cols
 studyID_bitesnap_data <- studyID_bitesnap_data %>% 
   rename("name" = "foodItemName") %>% 
@@ -261,7 +265,7 @@ m_cleaned <- m_cleaned %>%
 
 ### Save final data output
 write.csv(m_cleaned,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/manual_merged_diet_data.csv",
+          file = "/Users/alicezhang/Desktop/microbiome_data/manual_merged_diet_data.csv",
           row.names = FALSE)
 
 ################################################################################################

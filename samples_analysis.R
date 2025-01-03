@@ -219,9 +219,9 @@ ggplot(cutoff_long, aes(x = factor(cutoff), y = count, fill = sampleType)) +
   geom_text(aes(label=count), position = position_dodge(width = 0.9),
             vjust = -0.2) +
   labs(
-    title = "Distribution of Individuals Meeting Swab Cutoff Levels",
-    x = "Cutoff Level",
-    y = "Number of Individuals",
+    title = " ",
+    x = " ",
+    y = " ",
     fill = "Swab Type"
   ) +
   scale_fill_manual(

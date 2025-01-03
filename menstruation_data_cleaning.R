@@ -71,7 +71,7 @@ uminn_data_subset <- uminn_data %>%
   select(Sample.ID, Well, Special.Notes)
 
 # Use uminn_data_subset - set IDs
-# uminn_data_subset$qr <- sub("_.*", "", uminn_data_subset$Sample.ID)
+uminn_data_subset$qr <- sub("_.*", "", uminn_data_subset$Sample.ID)
 uminn_data_subset$inUminn <- TRUE
 
 # match uminn samples with blood to vaginal samples

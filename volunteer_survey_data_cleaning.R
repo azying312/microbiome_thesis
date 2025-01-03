@@ -113,6 +113,8 @@ history_data_recode <- history_data %>%
 table(history_data_recode$dietary_habits)
 history_data_recode$logDate
 
+table(history_data_recode$dietary_habits)
+length(history_data_recode$menstruate)
 ### Save final data output
 # write.csv(history_data_recode,
 #           file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv",

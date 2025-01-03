@@ -13,11 +13,11 @@ library(tidyverse)
 library(Matrix)
 
 # id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
-fungal.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequeced_data/Walther-Antonio_Project_022_ITS2.rds")
+fungal.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequenced_data/Walther-Antonio_Project_022_ITS2.rds")
 uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 samples.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_samples.csv")
 
-# bacterial.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequeced_data/Walther-Antonio_Project_022_16S.rds")
+# bacterial.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequenced_data/Walther-Antonio_Project_022_16S.rds")
 # bacterial_otu_table <- as.data.frame(otu_table(bacterial.data))
 # View(bacterial_otu_table)
 
@@ -53,7 +53,6 @@ head(colnames(otu_table(fungal.data)))
 
 ### Data Preprocessing
 
-
 otu_table_fungal.data <- as.data.frame(t(otu_table_fungal.data))
 
 metadata_fungal <- otu_table_fungal.data %>% 
@@ -87,9 +86,9 @@ fungal_metadata_df <- as.data.frame(as.matrix(sample_data(fungal_physeq_subset))
 
 ## Map uminn_data
 # samples.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 8-Sample.csv")
-samples.data$qr <- sub("_.*", "", samples.data$qr)
-samples.data <- samples.data %>% 
-  rename(SampleID=qr)
+samples.data$SampleID <- sub("_.*", "", samples.data$qr)
+# samples.data <- samples.data %>% 
+#   rename(SampleID=qr)
 # samples.data <- samples.data %>% 
 #   rename(biome_id=uid)
 # full_sample_data <- uminn_data %>% 
@@ -122,13 +121,18 @@ taxa_table_fungal.data <- ((tax_table(fungal_physeq_filtered)))
 sample_data_phyloseq <- as.data.frame(as.matrix(sample_data(fungal_physeq_filtered)))
 
 ### Basic Analysis
-# sample_sums(fungal_physeq_filtered)
-# taxa_sums(fungal_physeq_filtered)   
+
 ntaxa(fungal_physeq_filtered)
 nsamples(fungal_physeq_filtered)
 
 # OTU Confidence
 # summary(as.numeric(taxa_table_fungal.data$confidence))
+
+# filter for just fecal
+sample_data_phyloseq_fec <- sample_data_phyloseq %>% 
+  filter(sampleType=="fecal")
+fungal_otu_fec <- otu_table_fungal.data[rownames(sample_data_phyloseq_fec), , drop = FALSE]
+fungal_taxa_fec <- taxa_table_fungal.data[colnames(fungal_otu_fec), , drop = FALSE]
 
 # filter for just vaginal
 sample_data_phyloseq_vag <- sample_data_phyloseq %>% 
@@ -167,228 +171,163 @@ plot_ordination(fungal_physeq_vag, beta_div, color = "DominantSpecies") +
 # Normalize using relative abundance
 fungal_physeq_filtered_rel <- transform_sample_counts(fungal_physeq_vag, function(x) x / sum(x))
 
+######################################################
 
-# physeq_phylum <- tax_glom(fungal_physeq_vag, taxrank = "Phylum")
-# plot_bar(physeq_phylum, fill = "Phylum") + theme_minimal()
+otu_table_data <- as.data.frame(otu_table(fungal_physeq_filtered))
+taxa_data <- as.data.frame(tax_table(fungal_physeq_filtered))
 
-# Total OTU abundance per sample
-# barplot(sample_sums(fungal_physeq_filtered))
-# Total abundance per OTU across all samples
-# taxa_sums(fungal_physeq_filtered)
+# Calculate total abundance per species
+total_abundance <- colSums(otu_table_data, na.rm = TRUE)
+species_abundance <- data.frame(Species = taxa_data$Species, Total_Abundance = total_abundance)
+# works but there might be some separation I need to do here
+species_abundance <- species_abundance %>% 
+  group_by(Species) %>% 
+  summarise(Total_Abundance=sum(Total_Abundance, na.rm=TRUE)) %>% 
+  arrange(desc(Total_Abundance)) %>% 
+  ungroup() %>% 
+  filter(Total_Abundance != 0) %>% 
+  filter(Species != "")  %>% 
+  mutate(Relative_Abundance=
+           round((species_abundance$Total_Abundance / sum(species_abundance$Total_Abundance)) * 100, 2)) %>% 
+  mutate(Rank=row_number()) 
+
+summary(species_abundance$Total_Abundance)
+
+## Boxplot
+q1 <- quantile(species_abundance$Total_Abundance, 0.25, na.rm = TRUE)
+q3 <- quantile(species_abundance$Total_Abundance, 0.75, na.rm = TRUE)
+iqr <- q3 - q1
+lower_bound <- 0
+upper_bound <- q3 + 1.5 * iqr
+
+outliers <- species_abundance$Total_Abundance[species_abundance$Total_Abundance < lower_bound |
+                                                species_abundance$Total_Abundance > upper_bound]
+ggplot(species_abundance, aes(y = Total_Abundance)) +
+  geom_boxplot(fill = "orange", color = "black") +
+  # Set axis limits
+  coord_cartesian(ylim = c(lower_bound, upper_bound)) +  
+  labs(title = " ",
+       y = "Total Abundance") +
+  theme_minimal()
 
 
-# # Standardize sample names in OTU table
-# rownames(otu_table_fungal.data) <- gsub(" ", "_", rownames(otu_table_fungal.data))
-# rownames(otu_table_fungal.data) <- toupper(rownames(otu_table_fungal.data))
-# rownames(otu_table_fungal.data) <- paste("sample_", rownames(otu_table_fungal.data), sep = "")
-# # Add OTU col
-# otu_table_fungal.data2 <- otu_table_fungal.data
-# taxa_fungal.data2 <- taxa_fungal.data
-# otu_table_fungal.data2$OTU <- rownames(otu_table_fungal.data2)
-# taxa_fungal.data2$OTU <- rownames(taxa_fungal.data2)
-# # Merge OTU and Taxa
-# otu_taxa <- otu_table_fungal.data2 %>% 
-#   left_join(taxa_fungal.data2, by = 'OTU') %>% 
-#   # filtering for actual calssifications
-#   filter(Kingdom != "") %>%
-#   filter(confidence > 0) %>% 
-#   select("OTU", everything())
-# # Filter OTU table
-# filtered_OTU_table <- otu_table_fungal.data[rownames(otu_table_fungal.data) %in% otu_taxa$OTU,]
-# # Filter taxa table
-# filtered_taxa_table <- taxa_fungal.data %>% 
-#   filter(confidence > 0) %>% 
-#   filter(Kingdom != "")
+# Relative Abundance (percentage)
+# species_abundance <- species_abundance %>% 
+#   mutate(Relative_Abundance=
+#            round((species_abundance$Total_Abundance / sum(species_abundance$Total_Abundance)) * 100, 3))
 
+summary(species_abundance$Relative_Abundance)
 
-# Total Abundance
-species_abundance <- otu_taxa %>% 
-  group_by(Species) %>%
-  summarise(total_abundance=sum(across(starts_with("sample_"), ~sum(.)))) %>% 
-  filter(total_abundance != 0) %>% 
-  filter(Species != "") %>% 
-  arrange(desc(total_abundance))
-dim(species_abundance)
-# dim(otu_taxa)
+## Boxplot
+ggplot(species_abundance, aes(y = Relative_Abundance)) +
+  geom_boxplot(fill = "yellow", color = "black") +
+  # Set axis limits
+  coord_cartesian(ylim = c(0, 80)) +  
+  labs(title = " ",
+       y = "Relative Abundance (%)") +
+  theme_minimal()
 
-# TOTAL ABUNDANCE
-summary(species_abundance$total_abundance)
+## Rank Abundance
+# ggplot(species_abundance, aes(x = Rank, y = Total_Abundance)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_text(
+#     data = species_abundance[c(1:3),], 
+#     aes(label = Species), 
+#     nudge_y = 0.01*max(species_abundance$Total_Abundance),
+#     nudge_x = 8,
+#     size = 2, hjust = 0
+#   ) +
+#   theme_minimal() +
+#   labs(title = "Rank Abundance Curve", x = "Rank", y = "Total Abundance")
 
-# Relative Abundance
-relative_abundance <- species_abundance %>% 
-  mutate(relative_abundance=((total_abundance/sum(total_abundance))*100))
-dim(relative_abundance)
-
-# RELATIVE ABUNDANCE
-summary(relative_abundance$relative_abundance)
-
-### Visualization
-
-## Rank Abundance Curve
-otu_rank_abundance <- filtered_OTU_table %>%
-  rowSums(na.rm = TRUE) %>%
-  enframe(name = "OTU", value = "Total_Abundance") %>%
-  arrange(desc(Total_Abundance)) %>%
-  mutate(Rank = row_number())
-  # slice_head(n=20)
-
-otu_rank_abundance_20 <- otu_rank_abundance %>% 
-  slice_head(n=40)
-
-ggplot(otu_rank_abundance_20, aes(x = Rank, y = Total_Abundance)) +
+ggplot(species_abundance[c(1:20),], aes(x = Rank, y = Total_Abundance)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(title = "Rank Abundance Curve", x = "Rank", y = "Total Abundance")
+  geom_text(
+    data = species_abundance[c(1:3),],
+    aes(label = Species),
+    nudge_y = 0.02*max(species_abundance$Total_Abundance),
+    nudge_x = 0.05,
+    size = 5, hjust = 0
+  ) +
+  labs(title = " ", x = "Rank", y = "Total Abundance")
+  # labs(title = "Rank Abundance Curve (top 20)", x = "Rank", y = "Total Abundance")
 
-# Get dominant Species
-otu_rank_abundance <- otu_rank_abundance %>% 
-  left_join(otu_taxa, by="OTU")
-otu_rank_abundance <- otu_rank_abundance %>% 
-  filter(Species != "") %>% 
-  select(OTU, Total_Abundance, Rank, Species)
-
-otu_rank_abundance_species <- otu_rank_abundance %>% 
-  group_by(Species) %>% 
-  summarise(Count=sum(Total_Abundance)) %>% 
-  arrange(desc(Count))
-
-head(otu_rank_abundance_species, 10)
-
-# Subset samples
-set.seed(360)
-sample_subset <- sample(colnames(filtered_OTU_table), 60)
-
-otu_sample_subset <- filtered_OTU_table[, sample_subset]
-
-# Top 20 most abundant OTUs
-top_otu_abundance <- otu_sample_subset %>%
-  mutate(across(everything(), as.numeric)) %>% 
-  rowSums(na.rm = TRUE) %>% 
+## Top abundance - top 20 OTUs
+top_otu_abundance <- rowSums(otu_table_data, na.rm = TRUE) %>%
   enframe(name = "OTU", value = "Total_Abundance") %>%
-  arrange(desc(Total_Abundance)) %>% 
+  arrange(desc(Total_Abundance)) %>%
   slice_head(n = 20)
+# top_species_abundance <- species_abundance %>% 
+#   slice_head(n = 20)
+top_species_OTU <- otu_table_data[top_otu_abundance$OTU, ]
+heatmap_data <- as.data.frame(as.matrix(top_species_abundance), stringsAsFactors = FALSE) %>% 
+  mutate(Total_Abundance=as.numeric(Total_Abundance),
+         Relative_Abundance=as.numeric(Relative_Abundance))
 
-top_species_OTU <- otu_sample_subset %>%
-  rownames_to_column(var = "OTU") %>%
-  filter(OTU %in% top_otu_abundance$OTU)
-dim(top_species_OTU)
+## Alpha Div - Shannon Index
+alpha_diversity <- estimate_richness(fungal_physeq_filtered, measures = "Shannon")
+alpha_diversity_df <- as.data.frame(alpha_diversity)
+summary(alpha_diversity_df)
 
-heatmap_data <- top_species_OTU %>%
-  pivot_longer(cols = starts_with("sample_"), names_to = "Sample", values_to = "Abundance")
+# Add participant IDs from sample data
+sample_data_df <- as.data.frame(sample_data(fungal_physeq_filtered))
+alpha_diversity_df$biome_id <- sample_data_df$biome_id
 
-ggplot(heatmap_data, aes(x = Sample, y = OTU, fill = Abundance)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-  labs(title = "Heatmap of Top 20 OTU Abundances for 60 Samples (random)", x = "Sample", y = "OTU")
+alpha_diversity_summary <- alpha_diversity_df %>%
+  mutate(biome_id=as.numeric(biome_id)) %>% 
+  filter(!is.na(biome_id)) %>% 
+  # mutate(biome_id=as.factor(biome_id)) %>% 
+  group_by(biome_id) %>%
+  summarise(Mean_Shannon = mean(Shannon, na.rm = TRUE),
+            SD_Shannon = sd(Shannon, na.rm = TRUE),
+            Min_Shannon = min(Shannon, na.rm = TRUE),
+            Max_Shannon = max(Shannon, na.rm = TRUE)) %>% 
+  ungroup() 
 
-## Diversity Metrics
+alpha_diversity_summary <- alpha_diversity_summary %>%
+  mutate(biome_id = reorder(biome_id, -Mean_Shannon))
 
-# Shannon Index
-shannon_diversity <- otu_sample_subset %>%
-  summarise(across(starts_with("sample_"), ~ diversity(.x, index = "shannon"))) %>%
-  pivot_longer(cols = everything(), names_to = "Sample", values_to = "Shannon_Index")
-summary(shannon_diversity$Shannon_Index)
+summary(round(alpha_diversity_summary$Mean_Shannon, 2))
 
-ggplot(shannon_diversity, aes(x = Sample, y = Shannon_Index)) +
+# Plot Shannon Index
+ggplot(alpha_diversity_summary, aes(x = as.factor(biome_id), y = Mean_Shannon)) +
   geom_bar(stat = "identity", fill = "coral") +
   theme_minimal() +
-  labs(title = "Shannon Diversity Index Across 60 Samples (random)", x = "Sample", y = "Shannon Index") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  labs(title = " ", x = " ", y = "Shannon Index") +
+  # labs(title = "Shannon Diversity Index by Participants", x = "Participant ID", y = "Shannon Index") +
+  # geom_text(aes(label = round(Mean_Shannon, 2)), vjust = -0.5) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1)) 
 
-# Beta Diversity - Bray-Curtis dissimilarity matrix
-bray_curtis <- vegdist(top_species_OTU[,-1], method = "bray", na.rm=TRUE)
-
+## Beta Diversity - Bray-Curtis dissimilarity
+bray_curtis <- vegdist(otu_table_data, method = "bray")
 bray_curtis_df <- as.data.frame(as.matrix(bray_curtis))
-pheatmap(bray_curtis_df, cluster_rows = TRUE, cluster_cols = TRUE)
+biome_id <- sample_data_df$biome_id
+participant_id_df <- data.frame(biome_id=biome_id)
 
-### Pseudo participants (cluster into 60)
+# Plot Bray-Curtis dissimilarity
+pheatmap(bray_curtis_df,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE)
 
-top_otu_abundance <- filtered_OTU_table %>%
-  mutate(across(everything(), as.numeric)) %>% 
-  rowSums(na.rm = TRUE) %>% 
-  enframe(name = "OTU", value = "Total_Abundance") %>%
-  arrange(desc(Total_Abundance)) %>% 
-  slice_head(n = 60)
-otu_top_60 <- filtered_OTU_table[top_otu_abundance$OTU, ]
-bray_curtis_dist <- vegdist(t(otu_top_60), method = "bray", na.rm=TRUE)
+# Random subset
+subset_otu_table_data <- otu_table_data[1:50, ]
+subset_sample_data <- sample_data_df[1:50, ]
+bray_curtis_subset <- vegdist(subset_otu_table_data, method = "bray")
+bray_curtis_subset_df <- as.data.frame(as.matrix(bray_curtis_subset))
+biome_id_subset <- subset_sample_data$biome_id
+participant_id_subset_df <- data.frame(biome_id=biome_id_subset)
+pheatmap(bray_curtis_subset_df,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         annotation_col = participant_id_subset_df,
+         annotation_colors = list(biome_id = RColorBrewer::brewer.pal(3, "Set1")))
 
-## k-means
-set.seed(360)
-kmeans_result <- kmeans(bray_curtis_dist, centers = 60, nstart = 25)
-pseudo_participant_ids <- kmeans_result$cluster
+# NMDS ordination
+fungal_physeq_subset <- subset_samples(fungal_physeq_filtered, sampleType %in% c("vaginal"))
+beta_div <- ordinate(fungal_physeq_subset, method = "NMDS", distance = "bray")
 
-# create mapping
-sample_to_participant <- data.frame(
-  sample_id = names(kmeans_result$cluster),
-  participant_id = kmeans_result$cluster
-)
-otu_table_long <- otu_table_fungal.data %>%
-  rownames_to_column(var = "OTU") %>%
-  gather(key = "sample_id", value = "abundance", -OTU)
-otu_table_with_participant <- otu_table_long %>%
-  left_join(sample_to_participant, by = "sample_id")
-
-otu_table_by_participant <- otu_table_with_participant %>%
-  group_by(participant_id, OTU) %>%
-  summarise(total_abundance = sum(abundance, na.rm = TRUE))
- 
-# psuedo clustering
-cluster_counts <- table(kmeans_result$cluster)
-cluster_counts_df <- as.data.frame(cluster_counts)
-colnames(cluster_counts_df) <- c("cluster_id", "sample_count")
-
-ggplot(cluster_counts_df, aes(x = factor(cluster_id), y = sample_count)) +
-  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
-  geom_text(aes(label = sample_count), vjust = -0.5) +
-  labs(title = "Pseudo-Participant Groupings from K-means Clustering",
-       x="Pseudo-Participant",
-       y="Sample Count") +
-  scale_x_discrete(breaks = seq(1, 60, by = 1)) +
-  theme_minimal()
-
-## OTU and Taxa
-participant_id_vector <- 
-  kmeans_result$cluster[match(colnames(filtered_OTU_table), 
-                               names(kmeans_result$cluster))]
-
-filtered_OTU_table["participant_id", ] <- participant_id_vector
-filtered_OTU_table$OTU <- rownames(filtered_OTU_table)
-
-filtered_taxa_table$OTU <- rownames(filtered_taxa_table)
-otu_taxa <- filtered_OTU_table %>% 
-  left_join(filtered_taxa_table, by = 'OTU') %>% 
-  select("OTU", everything())
-dim(otu_taxa)
-# colnames(otu_taxa) <- tail(filtered_OTU_table, n=1)["participant_id",]
-# otu_taxa <- otu_taxa[-9272,]
-
-# participant_ids <- sub("\\..*", "", colnames(otu_taxa))
-
-participant_ids <- t(otu_taxa[nrow(otu_taxa),])
-participant_ids_name <- participant_ids[1, 1]
-flat_participant_ids <- as.vector(participant_ids[-1, ])
-participant_ids_df <- data.frame(item = flat_participant_ids)
-colnames(participant_ids_df) <- c(participant_ids_name)
-
-participant_ids <- as.data.frame(participant_ids["OTU"], participant_ids[["participant_id"]])
-participant_ids$participant_id <- as.numeric(as.data.frame(participant_ids)$participant_id)
-otu_taxa <- otu_taxa[-nrow(otu_taxa),]
-
-colnames(participant_ids) <- "participant_id" 
-otu_taxa2 <- cbind(otu_taxa, (participant_ids))
-
-# Calculate total abundance by participant and species
-total_abundance <- otu_taxa %>%
-  gather(key = "sample_id", value = "abundance", -participant_id) %>%
-  group_by(participant_id) %>%
-  summarise(total_abundance = sum(abundance))
-
-# relative abundance
-relative_abundance <- otu_taxa_table %>%
-  gather(key = "sample_id", value = "abundance", -participant_id) %>%
-  group_by(participant_id) %>%
-  mutate(relative_abundance = abundance / sum(abundance)) %>%
-  summarise(total_relative_abundance = sum(relative_abundance))
+plot_ordination(fungal_physeq_subset, beta_div, color = "biome_id") + theme_minimal() +
+  labs(title = "Beta Diversity (NMDS Plot) for Vaginal Samples by Participant ID")

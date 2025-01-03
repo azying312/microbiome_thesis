@@ -52,7 +52,7 @@ ggplot(heatmap_data_plot, aes(x = as.factor(Date), y = reorder(factor(study_id),
   geom_tile(color = "gray25") +
   scale_fill_manual(values = c("white", "lightblue", "blue", "darkblue"), 
                     na.value = "white")+
-  labs(title = "Number of Meals per person", 
+  labs(title = " ", 
        x = "Date", 
        y = "Biome ID", 
        fill = "Number of Meals") +

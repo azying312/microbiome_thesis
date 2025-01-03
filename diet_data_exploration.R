@@ -72,6 +72,19 @@ participant_vegetarian_status$study_id <- as.character(participant_vegetarian_st
 merged_diet_data <- merged_diet_data %>%
   left_join(participant_vegetarian_status, by = "study_id")
 
+# For a participant on a given day, get cals that are vegetarian v. not vegetarian
+# collapse data into foods for that participant by day and the percent of food that is vegetarian
+
+# vegetarian_percentage <- merged_diet_data %>% 
+#   mutate(study_id=as.numeric(study_id)) %>% 
+#   filter(!is.na(study_id)) %>% 
+#   group_by(study_id, Date) %>% 
+#   summarise(full_day_cal=sum(caloriesall, na.rm = TRUE),
+#             vegetarian_perc=sum(caloriesall[is_vegetarian==TRUE], na.rm=TRUE)) %>% 
+#   ungroup()
+# 
+# View(vegetarian_percentage)
+
 ### Save final data output
 # write.csv(merged_diet_data,
 #           file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_diet.csv",
