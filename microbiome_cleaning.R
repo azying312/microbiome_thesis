@@ -4,11 +4,11 @@ library(tidyverse)
 library(Matrix)
 
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/Walther-Antonio_Project_022_16S.rds")
-bacterial_otu_table <-otu_table(bacterial.data)
-bacterial_tax_table<-tax_table(bacterial.data)
-# uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+
+bacterial_otu_table <-otu_table(bacterial.data)
+bacterial_tax_table<-tax_table(bacterial.data)
 
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes) %>% 
