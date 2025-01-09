@@ -7,12 +7,12 @@
 
 library(tidyverse)
 
-full_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
-survey_data_full <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
+full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
+survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
 survey_data <- survey_data_full %>% 
-  select(biome_id, menstruate) %>%
-  rename(survey_menstruate=menstruate) # 14 no, 54 yes
+  select(biome_id, survey_menstruate) #%>%
+  # rename(survey_menstruate=menstruate) # 14 no, 54 yes
 
 ## Q: What proportion of self-reported days had blood; days that are inUminn & in self report
 selfReport_blood <- full_data %>% 
@@ -66,14 +66,8 @@ menstruate_df <- full_data %>%
   filter(person_menstruating==1) %>% 
   left_join(survey_data, by="biome_id")
 survey_data <- survey_data %>%
-  mutate(menses_data_entry = ifelse(biome_id %in% menstruate_df$biome_id, 1, 0)) %>%
-  mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0))
-
-# menstruate_df <- menstruate_df %>% 
-#   filter(person_menstruating==1) %>% 
-#   left_join(survey_data, by="biome_id") %>% 
-#   mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0)) %>% 
-#   mutate(menses_data_entry = ifelse(biome_id %in% menstruate_df$biome_id, 1, 0))
+  mutate(menses_data_entry = ifelse(biome_id %in% menstruate_df$biome_id, 1, 0)) #%>%
+  # mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0))
 
 # find mismatched entries - if they say menstruate 0 menses_data_entry 1
 mismatched_entries <- survey_data %>%
@@ -213,14 +207,12 @@ no_menses_data <- person_says_no_menses %>%
 survey_data_subset <- survey_data_full %>% 
   filter(biome_id %in% person_says_no_menses_ids) %>% 
   select(biome_id, activity_level, student_athelete, taken_antibiotics, meds,
-         vag_infection, menstruate, regular_periods, If.irregular..please.elaborate.on.the.frequency.,
-         What.is.the.number.of.days.in.your.monthly.cycle..that.is..how.many.days.are.there.from.the.first.day.of.one.period.to.the.first.day.of.your.next.period...,
+         vag_infection, survey_menstruate, regular_periods, irreg_period_notes,
+         period_len,
          menstrual_prod, vaginal_notes, menstrual_cup, tampon, pad, no_menstrual_product) %>% 
   full_join(no_menses_data) %>% 
   filter(has_menses==1) %>% 
   select(has_menses, everything())
-
-##
 
 person_says_no_menses <- full_data %>%
   filter(biome_id %in% person_says_no_menses_ids) %>% 

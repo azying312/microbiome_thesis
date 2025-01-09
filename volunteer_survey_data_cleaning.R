@@ -8,32 +8,16 @@
 library(tidyverse)
 library(lubridate) # date transformation
 
-history_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 9-Volunteer Medical History.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+source("~/Microbiome Thesis/functions.R")
 
-### Map uid to study id
+# Load data
+history_data <- read.csv("/Volumes/T7/microbiome_data/Report 9-Volunteer Medical History.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
-# Get unique study and biome health pairings
-study_and_u_id <- unique(id_mapping %>% 
-                           select(STUDY.ID, Biome.Health.App.ID))
-# Match and join columns
-study_and_u_id <- study_and_u_id %>% 
-  rename("study_id" = "STUDY.ID") %>% 
-  rename("biome_id" = "Biome.Health.App.ID")
+# Data Prep
 history_data <- history_data %>% 
   rename("biome_id" = "Your.Biome.Health.App.ID")
-study_and_u_id$study_id <- as.character(study_and_u_id$study_id)
-
-# Map ids
-history_data <- history_data %>%
-  left_join(study_and_u_id, by = "biome_id") %>%
-  mutate(biome_id = coalesce(study_id, biome_id)) %>%
-  select(-study_id)
-
-# Check missing ids
-missing_list <- history_data %>%
-  filter(is.na(as.numeric(biome_id)))
-print(unique(missing_list$biome_id))
+history_data <- study_mapping(history_data, id_mapping)
 
 #### Cleaning
 
@@ -49,14 +33,15 @@ activity_scale <- c("Sedentary (little to no exercise/physical activity)",
                     "Moderately active (4-6 hours of physical exercise per week)",
                     "Very active (7+ hours of physical exercise per week)")
 
-
-
-history_data_recode <- history_data %>% 
+history_data_recode <- history_data %>%
+  # Make logDate
+  mutate(logDate=format(mdy_hms(Timestamp), "%Y-%m-%d")) %>% 
   # Clean menstruate variable
-  rename(menstruate=Do.you.menstruate...Choose.one.) %>% 
-  # Date
-  rename(logDate=Today.s.Date) %>% 
-  mutate(logDate = mdy(logDate)) %>%
+  rename(survey_menstruate=Do.you.menstruate...Choose.one.) %>% 
+  mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0)) %>% 
+  # Remove this col: Date
+  select(!Today.s.Date) %>%
+  # mutate(logDate = mdy(logDate)) %>%
   # Ethnicity
   rename(ethnicity=How.would.you.describe.your.racial.ethnic.background...Indicate.all.that.apply.) %>% 
   # Sexuality
@@ -108,16 +93,22 @@ history_data_recode <- history_data %>%
     no_menstrual_product=ifelse(str_detect(menstrual_prod, "none"), 1, 0)
   ) %>% 
   # notes about period
-  rename(vaginal_notes=If.you.would.like.to.report.any.other.condition.or.event.related.to.vaginal.health.and.or.menstruation.that.you.think.may.be.relevant.to.the.study..please.do.so.in.the.space.below.)
+  rename(vaginal_notes=If.you.would.like.to.report.any.other.condition.or.event.related.to.vaginal.health.and.or.menstruation.that.you.think.may.be.relevant.to.the.study..please.do.so.in.the.space.below.) %>% 
+  # Irregular period notes If.irregular..please.elaborate.on.the.frequency.
+  rename(irreg_period_notes=If.irregular..please.elaborate.on.the.frequency.) %>% 
+  rename(period_len=What.is.the.number.of.days.in.your.monthly.cycle..that.is..how.many.days.are.there.from.the.first.day.of.one.period.to.the.first.day.of.your.next.period...) %>% 
+  rename(vag_discomfort=Are.you.currently.experiencing.vaginal.pain.or.discomfort...Choose.one.) %>% 
+  rename(period_last_day=What.was.the.date.of.the.first.day.of.your.last.menstrual.period.)
+
 
 table(history_data_recode$dietary_habits)
 history_data_recode$logDate
 
 table(history_data_recode$dietary_habits)
-length(history_data_recode$menstruate)
+length(history_data_recode$survey_menstruate)
 ### Save final data output
-# write.csv(history_data_recode,
-#           file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv",
-#           row.names = FALSE)
+write.csv(history_data_recode,
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv",
+          row.names = FALSE)
 
-table(history_data_recode$ethnicity)
+# table(history_data_recode$ethnicity)

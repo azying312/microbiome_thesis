@@ -11,42 +11,22 @@ library(tidyverse)
 library(reshape2)
 library(stringr)
 
+source("~/Microbiome Thesis/functions.R")
+
 # Load data
-menses_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 1-Menstruation - Report 1-Menstruation.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
-survey_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/alice_cleaned_survey_data.csv", header=TRUE)
-# uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
-# uminn_data_qc <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Swabs with blood - QC.csv", header=TRUE)
-uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
-samples_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
+menses_data <- read.csv("/Volumes/T7/microbiome_data/Report 1-Menstruation.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
+uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
+samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
 
-### MAPPING IDS
-
-# Get unique study and biome health pairings
-study_and_u_id <- unique(id_mapping %>% 
-                           select(STUDY.ID, Biome.Health.App.ID))
-# Match and join columns
-study_and_u_id <- study_and_u_id %>% 
-  rename("study_id" = "STUDY.ID") %>% 
-  rename("biome_id" = "Biome.Health.App.ID")
-menses_data <- menses_data %>% 
-  rename("biome_id" = "uid")
-study_and_u_id$study_id <- as.character(study_and_u_id$study_id)
-# Map ids
+# Data Prep
 menses_data <- menses_data %>%
-  left_join(study_and_u_id, by = "biome_id") %>%
-  mutate(biome_id = coalesce(study_id, biome_id)) %>%
-  select(-study_id)
-# Check missing ids
-missing_list <- menses_data %>%
-  filter(is.na(as.numeric(biome_id)))
-print(unique(missing_list$biome_id))
-# convert to numeric
-menses_data$biome_id <- as.numeric(menses_data$biome_id)
-head(menses_data)
+  rename("biome_id" = "uid")
+menses_data <- study_mapping(menses_data, id_mapping)
 
-### DATA CLEANING
 
+# DATA CLEANING
 menses_data_cleaned <- menses_data %>% 
   filter(menstruation!="") %>% 
   mutate(menstruation_numeric = case_when(
@@ -58,15 +38,14 @@ menses_data_cleaned <- menses_data %>%
     TRUE ~ NA_real_
   )) %>%
   mutate(menstruation_text=menstruation) %>% 
-  mutate(menstruation=ifelse(menstruation_numeric>0, 1, menstruation_numeric)) %>% 
-  # select(biome_id, logDate, menstruation) %>% 
+  mutate(menstruation=ifelse(menstruation_numeric>0, 1, menstruation_numeric)) %>%
   mutate(biome_id=as.numeric(biome_id)) %>% 
-  mutate(inSelfReport=TRUE)
+  mutate(inSelfReport=TRUE) %>% 
+  select(biome_id, logDate, menstruation, products, menstruation_numeric, menstruation_text, inSelfReport)
 head(menses_data_cleaned)
 
-### UMINN DATA INTERPOLATION
+### UMinn Data Cleaning
 
-# get samples
 uminn_data_subset <- uminn_data %>% 
   select(Sample.ID, Well, Special.Notes)
 
@@ -85,16 +64,11 @@ uminn_data_subset <- uminn_data_subset %>%
 
 # clean UMinn samples
 uminn_data_subset <- uminn_data_subset %>% 
-  filter(logDate!="0000-00-00") %>% # no corresponding logDate
+  # no corresponding logDate
+  filter(logDate!="0000-00-00") %>%
   mutate(uMinn_menstruation=ifelse(str_detect(Special.Notes, "Blood")==TRUE, 1, 0)) %>%  # set to menstruation true
   select(biome_id, logDate, uMinn_menstruation, inUminn, Special.Notes) %>% 
-  mutate(biome_id=as.numeric(biome_id)) #%>% 
-  # errors in sample processing from UMinn
-  # filter(!str_detect(Special.Notes, "error")) %>% 
-  # filter(!str_detect(Special.Notes, "No swab in tube"))
-
-# error_uminn_data_subset <- uminn_data_subset %>% 
-  # filter(str_detect(Special.Notes, "Processor error") | str_detect(Special.Notes, "Technical error") | str_detect(Special.Notes, "No swab in tube"))
+  mutate(biome_id=as.numeric(biome_id))
 
 # identical rows in UMinn
 identical_uminn_data_subset <- uminn_data_subset %>% 
@@ -163,7 +137,7 @@ sum(is.na(full_menstruation_data$menstruation_status))
 
 ### Save final data output
 write.csv(full_menstruation_data,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_menstruation_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv",
           row.names = FALSE)
 
 # Vaginal samples from uminn (menses and non menses)
@@ -186,7 +160,7 @@ uminn_data_vaginal <- uminn_data_vaginal %>%
   filter(!str_detect(Special.Notes, "error")) # filter out errors
 
 write.csv(uminn_data_vaginal,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_vaginal_samples_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_vaginal_samples_data.csv",
           row.names = FALSE)
 
 

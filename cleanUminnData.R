@@ -1,6 +1,6 @@
 library(dplyr)
 
-uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
+uminn_data <- read.csv("/Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
 
 uminn_data <- uminn_data %>% 
   filter(Sample.ID != "BLANK") %>% 
@@ -12,5 +12,5 @@ uminn_data <- uminn_data %>%
 uminn_data$qr <- sub("_.*", "", uminn_data$Sample.ID)
 
 write.csv(uminn_data,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_uminn_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv",
           row.names = FALSE)
