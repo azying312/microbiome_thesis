@@ -41,6 +41,9 @@ sample_data_obj <- sample_data(metadata_bacteria)
 ## Saving as new obj
 bacteria_physeq <- phyloseq(bacterial_otu_table, sample_data_obj, bacterial_tax_table)
 
+# # Save new obj
+# saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
+
 ### Data Cleaning
 bacteria_physeq_otu <- otu_table(bacteria_physeq)
 
@@ -90,13 +93,15 @@ bacteria_physeq <- phyloseq(otu_table_obj, sample_data_obj, bacterial_tax_table)
 
 # Save new obj
 saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
-
-#
-#
-#
-#
+# saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 
 ### Filter vaginal data
+library(phyloseq)
+library(decontam)
+library(tidyverse)
+library(Matrix)
+
+# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
@@ -140,15 +145,18 @@ bacteria_physeq_no_contam <- phyloseq(otu_table(bacteria_physeq_no_contam), bact
 
 # Save new obj
 saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_decontam.rds")
+# saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_decontam.rds")
 
 ## Data Processing
 
-# Subset taxa; Filter ASVs w/o Species assignment
-bacteria_physeq_no_contam <- subset_taxa(
-  bacteria_physeq_no_contam,
-  !is.na(tax_table(bacteria_physeq_no_contam)[, "Species"]) & 
-    tax_table(bacteria_physeq_no_contam)[, "Species"] != ""
-)
+bacteria_physeq_no_contam <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_decontam.rds")
+
+# old data only
+# bacteria_physeq_no_contam <- subset_taxa(
+#   bacteria_physeq_no_contam,
+#   !is.na(tax_table(bacteria_physeq_no_contam)[, "Species"]) & 
+#     tax_table(bacteria_physeq_no_contam)[, "Species"] != ""
+# )
 
 # Filter ASVs w/o Phylum asst
 bacteria_physeq_subset <- subset_taxa(bacteria_physeq_no_contam, !is.na(Phylum) & Phylum != "")
@@ -160,6 +168,11 @@ bacteria_physeq_clean <- phyloseq(otu_table(bacteria_physeq_subset), bacteria_ph
 
 # Save new obj
 saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleaned.rds")
+# saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_cleaned.rds")
+
+## Species Cleaning
+
+# bacteria_physeq_clean <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleaned.rds")
 
 # # ## Blanks
 # # bacteria_metadata_df <- as.data.frame(as.matrix(sample_data(bacteria_physeq))) %>% 

@@ -8,79 +8,144 @@ library(Matrix)
 
 # Use corrected data after
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleaned.rds")
-
-##########################################################################################
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_cleaned.rds")
+###############################################################################################
 
 #### Exploratory Data Analysis
 
 # Relative abundances
 vaginal_relative_abundances <- transform_sample_counts(bacterial.data, function(x) x/sum(x))
-# vaginal_relative_abundances <- transform_sample_counts(bacteria_subset_vaginal, function(x) x/sum(x))
 relative_abundance_otu <- as.data.frame(otu_table(vaginal_relative_abundances))
-
 relative_abundance_otu_t <- t(relative_abundance_otu) %>% as.data.frame()
-relative_abundance_otu_t$SampleID <- rownames(relative_abundance_otu_t)
 
+# Add sample ID
+relative_abundance_otu$SampleID <- rownames(relative_abundance_otu)
 bacteria_metadata_df <- sample_data(bacterial.data)
 bacteria_metadata_df <- bacteria_metadata_df[,-2]
-otu_with_participant <- relative_abundance_otu_t %>%
-  left_join(bacteria_metadata_df, by="SampleID")
 
+otu_with_participant <-  relative_abundance_otu %>%
+  left_join(bacteria_metadata_df, by="SampleID")
+rownames(otu_with_participant) <- otu_with_participant$SampleID
+
+relative_abundance_otu <- relative_abundance_otu %>% 
+  select(!SampleID)
 # bray_curtis_dist <- vegdist(t(relative_abundance_otu), method = "bray")
-specnumber.ra <- specnumber(relative_abundance_otu_t)
+# specnumber.ra <- specnumber(relative_abundance_otu_t)
 
 ###### Five Community State Type (CSTs) Clustering
 
 # species to CST mapping
 species_to_cst <- data.frame(
-  Species = c("Lactobacillus crispatus", "Lactobacillus gasseri", "Lactobacillus iners", "Lactobacillus jensenii"),
+  Species = c("crispatus", "gasseri", "iners", "jensenii"),
   CST = c("I", "II", "III", "V") # IV is anaerobic/diverse cluster
 )
 
 # Get most abundant OTU per sample
-max_taxa <- apply(relative_abundance_otu, 2, function(sample) {
+max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
   taxa_idx <- which.max(sample)
   taxa_names(vaginal_relative_abundances)[taxa_idx]
 })
 
 # Map most abundant OTU to the sample data
 bacteria_metadata_df$max_taxa <- max_taxa
-bacteria_taxa_table <- tax_table(bacterial.data)
 
-# Map max_taxa to name
-bacteria_metadata_df$OTU <- bacteria_taxa_table[bacteria_metadata_df$max_taxa, "Species"]
+
+###################################################################################################
+
+### Get Species variable cleaned in new data
+
+bacteria_taxa_table <- tax_table(bacterial.data)
+bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
+
+dim(bacteria_taxa_df) # 92499    10
+
+length(bacteria_taxa_df$Species) # 92499
+sum(bacteria_taxa_df$Species=="") # 40397
+sum(bacteria_taxa_df$Species_exact=="") # 90484
+
+bacteria_taxa_df <- bacteria_taxa_df %>% 
+  mutate(Species_exact=ifelse(Species_exact=="", Species, Species_exact))
+sum(bacteria_taxa_df$Species_exact=="") # 39845
+sum(bacteria_taxa_df$Species_exact!="") # 52654
+
+# Subset taxa; Filter ASVs w/o Species_exact assignment
+bacterial.data_subset <- subset_taxa(
+  bacterial.data,
+  Species_exact != ""
+)
+
+bacteria_taxa_table <- tax_table(bacterial.data_subset)
+bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
+dim(bacteria_taxa_df) # 2015 OTU <-- 52654 OTUs  10 cols
+
+bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "Species_exact"]) # 2039 samples
+
 # Set sample data in phyloseq obj
 sample_data(bacterial.data) <- bacteria_metadata_df
 
-# Add CST col - check what this doing
-# bacteria_taxa_table$CST <- ifelse(
 bacteria_taxa_table <- as.data.frame(bacteria_taxa_table)
 
 # Assign CST col
-bacteria_metadata_df
-bacteria_metadata_df <- as.data.frame(bacteria_metadata_df)
+# dim(bacteria_metadata_df)
+bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
+class(bacteria_metadata_df)
 
-bacteria_metadata_df$CST <- ifelse(
-  bacteria_metadata_df$OTU %in% species_to_cst$Species,
-  species_to_cst$CST[match(bacteria_metadata_df$OTU, species_to_cst$Species)],
+# Expand meta data for CST assignment
+match_species <- species_to_cst$Species
+
+bacteria_metadata_df_long <- bacteria_metadata_df %>% 
+  mutate(separate_flag = grepl(paste(match_species, collapse = "|"), OTU))  %>%
+  # Separate rows only for flagged rows
+  separate_rows(OTU, sep = "/") %>%
+  filter(separate_flag | (!separate_flag & !grepl("/", OTU))) %>%
+  mutate(CST_species=OTU %in% match_species) %>% 
+  group_by(across(-OTU)) %>%
+  # Separate CST I, II, III, V species
+  reframe(
+    OTU = c(
+      OTU[CST_species],                     
+      paste(OTU[!CST_species], collapse = "/") # IV Species
+    )) %>% 
+  filter(!(OTU=="")) %>% 
+  select(-c(separate_flag, CST_species))
+
+bacteria_metadata_df_long$CST <- ifelse(
+  bacteria_metadata_df_long$OTU %in% species_to_cst$Species,
+  species_to_cst$CST[match(bacteria_metadata_df_long$OTU, species_to_cst$Species)],
   # Assign to CST IV if not in I, II, III, V
   "IV"  
 )
 
-table(bacteria_metadata_df$CST)
-table(bacteria_metadata_df$OTU)
+table(bacteria_metadata_df_long$CST)
+table(bacteria_metadata_df_long$OTU)
+
+## Check repeats
+freq_table <- table(bacteria_metadata_df_long$SampleID)
+freq_df <- as.data.frame(freq_table)
+colnames(freq_df) <- c("SampleID", "Freq")
+summary(freq_df$Freq)
+
+freq_table <- table(bacteria_metadata_df_long$max_taxa)
+freq_df <- as.data.frame(freq_table)
+colnames(freq_df) <- c("OTU", "Freq")
+summary(freq_df$Freq)
+
+freq_table <- table(bacteria_metadata_df$max_taxa)
+freq_df <- as.data.frame(freq_table)
+colnames(freq_df) <- c("OTU", "Freq")
+summary(freq_df$Freq)
 
 ########################################################
 
 # Aggregate data by participants by mean relative abundance for a given OTU
 participant_otu <- tapply(sample_names(bacteria_metadata_df), 
                           sample_data(bacteria_metadata_df)$biome_id, 
-                          function(samples) rowMeans(otu_table(vaginal_relative_abundances)[, samples, drop = FALSE]))
+                          function(samples) rowMeans(t(otu_table(vaginal_relative_abundances))[, samples, drop = FALSE]))
 participant_otu <- do.call(cbind, participant_otu)
 rownames(participant_otu) <- taxa_names(vaginal_relative_abundances)
 
 ## Alpha Div - Shannon Index
-shannon.24 <- diversity(t(otu_table(bacterial.data)), index="shannon")
+shannon.24 <- diversity((otu_table(bacterial.data)), index="shannon")
 
 # Add participant IDs from sample data | Merge the calculated Shannon diversity values with metadata
 bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
