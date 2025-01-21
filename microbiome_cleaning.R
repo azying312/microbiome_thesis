@@ -92,17 +92,17 @@ tax_names <- rownames(bacterial_tax_table)
 bacteria_physeq <- phyloseq(otu_table_obj, sample_data_obj, bacterial_tax_table)
 
 # Save new obj
-saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
+saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
 # saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 
-### Filter vaginal data
+### Filter out vaginal data
 library(phyloseq)
 library(decontam)
 library(tidyverse)
 library(Matrix)
 
-# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
-bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
+bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
+# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 bacteria_physeq_otu <- otu_table(bacteria_physeq)
@@ -119,6 +119,33 @@ vaginal_metadata <- bacteria_metadata_df %>%
   filter(!is.na(biome_id)) %>%
   filter(sampleType=="vaginal")
 
+################################################################################
+# Get fecal swabs
+fecal_metadata <- bacteria_metadata_df %>% 
+  left_join(samples.data, by="qr") %>% 
+  filter(!is.na(biome_id)) %>%
+  filter(sampleType=="fecal")
+
+# Get saliva swabs
+saliva_samples <- samples.data %>% 
+  filter(sampleType!="fecal" & sampleType!="vaginal")
+
+# get vaginal and fecal QRs
+fv_qr <- c(vaginal_metadata$qr, fecal_metadata$qr) # 3453
+bacteria_metadata_df_filtered <- bacteria_metadata_df %>% 
+  filter(!qr %in% fv_qr) %>% 
+  filter(is_blank!=TRUE)
+
+length(setdiff(bacteria_metadata_df_filtered$qr, saliva_samples$qr))
+length(setdiff(saliva_samples$qr, bacteria_metadata_df_filtered$qr))
+intersect(bacteria_metadata_df_filtered$qr, saliva_samples$qr)
+
+savlia_metadata <- bacteria_metadata_df %>%
+  left_join(samples.data, by="qr") %>%
+  filter(!is.na(biome_id)) %>%
+  filter(sampleType=="saliva")
+################################################################################
+
 # Subset samples
 bacteria_subset_vaginal <- subset_samples(
   bacteria_physeq,
@@ -134,10 +161,11 @@ contam_prev <- isContaminant(bacteria_subset_vaginal, method = "prevalence", neg
 contaminants <- contam_prev$contaminant
 table(contam_prev$contaminant)
 
-# bacteria_subset_vaginal_otu <- otu_table(bacteria_subset_vaginal)
-# bacteria_subset_vaginal_tax <- tax_table(bacteria_subset_vaginal)
-# bacteria_subset_vaginal_meta <- sample_data(bacteria_subset_vaginal)
-# ntaxa(bacteria_subset_vaginal)
+## Saliva
+bacteria_subset_saliva <- subset_samples(
+  bacteria_physeq,
+  SampleID %in% savlia_metadata$SampleID
+)
 
 # Filter the OTUs in the phyloseq object
 bacteria_physeq_no_contam <- prune_taxa(!contaminants, bacteria_subset_vaginal)
