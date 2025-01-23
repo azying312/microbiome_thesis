@@ -10,7 +10,7 @@ packs <- c("tidyverse")
 lapply(packs, require, character.only = TRUE)
 
 ## Load Data
-merged_diet_data <- read_csv("/Users/alicezhang/Desktop/microbiome_data/alice_fully_merged_diet_data.csv")
+merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
 
 sum(is.na(merged_diet_data$serving.size))
 dim(merged_diet_data)
@@ -34,7 +34,8 @@ common_meats <- c("beef", "fish", "pork", "chicken", "steak", "turkey", "shrimp"
                   "duck", "el table sandwich", "wonton soup")
 
 exclude_foods <- c("goldfish", "plant-based chicken nuggets", "goldfish, original", "plant based", "vegan", "vegetarian", 
-                   "vegetarian sausage patty", "vegetarian sausage patties", "beyond burger", "no meat", "vegetable sushi")
+                   "vegetarian sausage patty", "vegetarian sausage patties", "beyond burger", "no meat", "vegetable sushi",
+                   "Chipotle Black Bean Burger")
 # Create regex patterns for meat and exclusion lists
 meat_pattern <- paste0("\\b(", paste(common_meats, collapse = "|"), ")\\b")
 exclude_pattern <- paste0("\\b(", paste(exclude_foods, collapse = "|"), ")\\b")
@@ -52,9 +53,9 @@ merged_diet_data <- merged_diet_data %>%
   select(-name_lower)
 
 unique_vegetarian_pairs <- merged_diet_data %>%
-  select(name, vegetarian) %>%  # Select the relevant columns
-  distinct() %>%                   # Get unique combinations
-  arrange(name)                    # Optional: arrange by name for easier viewing
+  select(name, vegetarian) %>%  
+  distinct() %>%                
+  arrange(name) 
 
 ## Check if participant vegetarian
 participant_vegetarian_status <- merged_diet_data %>%

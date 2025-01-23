@@ -123,60 +123,6 @@ print(cst_summary)
 #       TRUE ~ "IV" # Assign "IV" for diverse/anaerobic or unclassified species
 #     )
 #   )
-# 
-# table(bacteria_metadata_df$CST)
-# cst_summary <- bacteria_metadata_df %>% 
-#   count(CST) %>% 
-#   mutate(Percentage=100*(n/sum(n)))
-# print(cst_summary)
-
-# Expand meta data for CST assignment
-# match_species <- species_to_cst$Species
-
-# bacteria_metadata_df_long <- bacteria_metadata_df %>% 
-#   mutate(separate_flag = grepl(paste(match_species, collapse = "|"), OTU))  %>%
-#   # Separate rows only for flagged rows
-#   separate_rows(OTU, sep = "/") %>%
-#   filter(separate_flag | (!separate_flag & !grepl("/", OTU))) %>%
-#   mutate(CST_species=OTU %in% match_species) %>% 
-#   group_by(across(-OTU)) %>%
-#   # Separate CST I, II, III, V species
-#   reframe(
-#     OTU = c(
-#       OTU[CST_species],                     
-#       paste(OTU[!CST_species], collapse = "/") # IV Species
-#     )) %>% 
-#   filter(!(OTU=="")) %>% 
-#   select(-c(separate_flag, CST_species))
-
-# bacteria_metadata_df_long$CST <- ifelse(
-#   bacteria_metadata_df_long$OTU %in% species_to_cst$Species,
-#   species_to_cst$CST[match(bacteria_metadata_df_long$OTU, species_to_cst$Species)],
-#   # Assign to CST IV if not in I, II, III, V
-#   "IV"  
-# )
-# 
-# table(bacteria_metadata_df_long$CST)
-# table(bacteria_metadata_df_long$OTU)
-
-## Check repeats
-# freq_table <- table(bacteria_metadata_df_long$SampleID)
-# freq_df <- as.data.frame(freq_table)
-# colnames(freq_df) <- c("SampleID", "Freq")
-# summary(freq_df$Freq)
-# 
-# freq_table <- table(bacteria_metadata_df_long$max_taxa)
-# freq_df <- as.data.frame(freq_table)
-# colnames(freq_df) <- c("OTU", "Freq")
-# summary(freq_df$Freq)
-# 
-# freq_table <- table(bacteria_metadata_df$max_taxa)
-# freq_df <- as.data.frame(freq_table)
-# colnames(freq_df) <- c("OTU", "Freq")
-# summary(freq_df$Freq)
-
-# bacteria_metadata_df_long_filter <- bacteria_metadata_df_long %>% 
-#   filter(max_taxa=="4554fad0a0d39e7fe9a9d3ed5686ec7e")
 
 ########################################################
 # PNAS Clustering
@@ -243,116 +189,28 @@ for(CST in CSTs) {
   pshm <- prune_samples(sample_data(pshm)$CST == CST, pshm)
   print(plot_heatmap(pshm, taxa.label="Species", taxa.order=taxa.order) + ggtitle(paste("CST:", CST)))
 }
-# 
-# # Heatmap helper functions
-# make_hcb <- function(data, var, name = NULL, fillScale = NULL, ...) {
-#   hcb <- ggplot(data=data, aes_string(x="index", y=1, fill=var)) + 
-#     geom_raster() +
-#     scale_y_continuous(expand=c(0,0), breaks=1, labels=name) + 
-#     scale_x_continuous(expand=c(0,0)) +
-#     xlab(NULL) + ylab(NULL) +
-#     theme(axis.title=element_blank(), axis.ticks=element_blank()) +
-#     theme(axis.text.x=element_blank()) +
-#     theme(axis.text.y=element_text(size=8, face="bold")) +
-#     theme(plot.margin=unit(c(0,0,0,0),"lines"), 
-#           axis.ticks.margin = unit(0,"null"), ...) +
-#     guides(fill=F)
-#   if(!is.null(fillScale)) hcb <- hcb + fillScale
-#   return(hcb)
-# }
-# 
-# plot_heatmap.2 <- function(ps, sample.label=NULL, taxa.label=NULL, ...) {
-#   hm <- plot_heatmap(ps, taxa.label="Species", sample.order=sample.order, taxa.order = taxa.order)
-#   hm <- hm + theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
-#   low = "#000033"; high = "#66CCFF"; trans = scales::log_trans(4); na.value = "black" # From plot_heatmap defaults
-#   new_gradient <- scale_fill_gradient(low = low, high = high, trans = trans, na.value = na.value, breaks = c(0.001, 0.01, 0.1, 1), name="Relative\nabundance")
-#   hm <- hm + theme(plot.margin=unit(c(0,0.5,0.5,0.5),"lines"))
-#   hm <- hm + new_gradient
-#   hm <- hm + geom_raster() #
-#   hm <- hm + ylab("Taxa")
-#   hm$layers <- hm$layers[2] #
-#   return(hm)
-# }
-# 
-# mush <- function(hmap, hcbs) {
-#   cbgs <- lapply(hcbs, ggplotGrob)
-#   hmg <- ggplotGrob(hmap)
-#   # Make sure both plots have the same width in our final output
-#   cbWidths <- lapply(cbgs, function(x) x$widths[1:4])
-#   maxWidth <- do.call(unit.pmax, cbWidths)
-#   maxWidth <- unit.pmax(hmg$widths[1:4], maxWidth)
-#   
-#   # For visibility, set to the maximum width
-#   hmg$widths[1:4] <- as.list(maxWidth)
-#   for(i in seq_along(cbgs)) {
-#     cbgs[[i]]$widths[1:5] <- as.list(unit.c(maxWidth, hmg$widths[5]+hmg$widths[6]))
-#   }
-#   heights <- unit.c(unit(rep(1,length(cbgs)), "lines"), unit(1, "null"))
-#   rval <- do.call(arrangeGrob, args = c(cbgs, list(hmg), ncol=1, heights=list(heights)))
-#   return(rval)
-# }
-# 
-# # Taxa sample image
-# top25 <- names(sort(taxa_sums(ps), decreasing=T))[1:25]
-# pshm <- prune_taxa(top25,ps)
-# taxa.order <- names(sort(taxa_sums(pshm)))
-# 
-# sample.order <- rownames(sample_data(pshm)[order(get_variable(pshm, "CST"))])
-# hm <- plot_heatmap.2(pshm, taxa.label="Species", sample.order=sample.order, taxa.order=taxa.order)
-# hm <- hm + theme(axis.title.x = element_text(size=10),
-#                  axis.title.y = element_text(size=10),
-#                  axis.text.x = element_text(size=7),
-#                  axis.text.y = element_text(size=7),
-#                  plot.title = element_text(size=8),
-#                  legend.text = element_text(size=7),
-#                  legend.title = element_text(size=8),
-#                  #                legend.margin = unit(c(0.1,0.1,0.1,0.1),"mm"),
-#                  #                legend.key.height = unit(1, "in"),
-#                  legend.key.width = unit(0.15, "in"),
-#                  plot.margin=unit(c(0,0,0,0),"mm"))
-# 
-# ### CHANGING SPECIES TO TAXA ON YLABEL
-# labvec <- as(tax_table(pshm)[, "Species"], "character")
-# names(labvec) <- taxa_names(pshm)
-# labvec <- labvec[taxa.order]
-# labvec[is.na(labvec)] <- ""
-# labvec[which(labvec == "Lactobacillus reuteri-vaginalis")] <- "L. reuteri-vaginalis"
-# hm <- hm + scale_y_discrete("Taxa", labels = labvec)
-# hm <- hm + theme(axis.title = element_text(size=10))
-# 
-# hcbdf <- data.frame(sample_data(pshm))[sample.order,]
-# hcbdf$index <- seq(1,nsamples(pshm))
-# hcb <- make_hcb(hcbdf, "CST", name="CST", fillScale = CSTFillScale)
-# hcb <- hcb + annotate("text", x=tapply(hcbdf$index, hcbdf[,"CST",drop=T], mean), y=1, label=levels(hcbdf[,"CST",drop=T]), size=2)
-# 
-# hcbPreterm <- make_hcb(hcbdf, "Outcome", name="Very Pre Term",
-#                        fillScale = scale_fill_manual(values=c("Term"="grey60", "Preterm"="maroon", "VeryPreterm"="magenta2", "Marginal"="white")))
-# #hcbPreterm <- hcbPreterm + theme(axis.text.y = element_text(size=8, face="bold", color="magenta2"))
-# #hcbPreterm <- hcbPreterm + theme(axis.text.y = element_text(size=8, face="bold", color="maroon"))
-# hcbPreterm <- hcbPreterm + theme(axis.text.y = element_text(size=8, face="bold", color="grey60"))
-# 
-# Fig2 <- mush(hm, list(hcbPreterm, hcb))
-# print(Fig2)
 
 ########################################################
 
+bacteria_metadata_df <- sample_data(bacterial.data_subset)
+# bacteria_metadata_df <- as.data.frame(as(otu_table(bacterial.data_subset), "matrix"))
+otu_table_df <- as(otu_table(bacterial.data_subset), "matrix")
+
 # Aggregate data by participants by mean relative abundance for a given OTU
 participant_otu <- tapply(sample_names(bacteria_metadata_df), 
-                          sample_data(bacteria_metadata_df)$biome_id, 
+                          sample_data(bacterial.data_subset)$biome_id, 
                           function(samples) rowMeans(t(otu_table(vaginal_relative_abundances))[, samples, drop = FALSE]))
 participant_otu <- do.call(cbind, participant_otu)
 rownames(participant_otu) <- taxa_names(vaginal_relative_abundances)
 
 ## Alpha Div - Shannon Index
-shannon.24 <- diversity((otu_table(bacterial.data)), index="shannon")
+shannon.24 <- vegan::diversity(otu_table_df, "shannon")
 
 # Add participant IDs from sample data | Merge the calculated Shannon diversity values with metadata
 bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
 shannon.df.24 <- data.frame("SampleID"=names(shannon.24), "shannon"=shannon.24)
-shannon.qr.merged.24 <- merge(shannon.df.24, bacteria_metadata_df[,1:4], by="SampleID") %>% 
+shannon.qr.merged.24 <- merge(shannon.df.24, bacteria_metadata_df, by="SampleID") %>% 
   mutate(biome_id=as.integer(biome_id))
-# sample_data_df <- as.data.frame(sample_data(fungal_physeq_filtered))
-# alpha_diversity_df$biome_id <- sample_data_df$biome_id
 
 # Define unique user IDs and labels
 unique.uid.24 <- sort(unique(shannon.qr.merged.24$biome_id))
