@@ -87,14 +87,14 @@ person_says_no_menses <- full_data %>%
 # Check people who said they do menstruate with no entries (missingness)
 missing_entries <- survey_data %>%
   filter(survey_menstruate == 1 & menses_data_entry == 0)
-dim(missing_entries)
+dim(missing_entries) # 3
 length(unique(missing_entries$biome_id))
 
 # Number of people who don't menstruate (say they don't & no menstruation reports for them)
 no_menses <- survey_data %>%
   filter(survey_menstruate == 0 & menses_data_entry == 0)
 dim(no_menses)
-(unique(no_menses$biome_id))
+unique(no_menses$biome_id)
 length(unique(no_menses$biome_id))
 
 # Do menstruate with menses entries
@@ -206,8 +206,7 @@ no_menses_data <- person_says_no_menses %>%
 ## Survey data
 survey_data_subset <- survey_data_full %>% 
   filter(biome_id %in% person_says_no_menses_ids) %>% 
-  select(biome_id, activity_level, student_athelete, taken_antibiotics, meds,
-         vag_infection, survey_menstruate, regular_periods, irreg_period_notes,
+  select(biome_id, activity_level, sport, taken_antibiotics, birthControl, survey_menstruate, regular_periods, irreg_period_notes,
          period_len,
          menstrual_prod, vaginal_notes, menstrual_cup, tampon, pad, no_menstrual_product) %>% 
   full_join(no_menses_data) %>% 
@@ -490,12 +489,6 @@ full_data_subset <- filtered_data %>%
   select(biome_id, logDate, menstruation_status, uMinn_menstruation, menstruation, person_menstruating)
 complete_grid <- expand.grid(biome_id = unique(full_data_subset$biome_id),
                              logDate = all_days)
-# 
-# heatmap_data <- heatmap_data %>% 
-#   group_by(biome_id) %>%
-#   mutate(menstruating_days_count = sum(Value == "Menstruating", na.rm = TRUE)) %>%
-#   arrange(desc(menstruating_days_count), biome_id) %>% 
-#   ungroup()
 
 # Plot: Map to with all ppl
 heatmap_data <- complete_grid %>%
@@ -796,8 +789,8 @@ ggplot(relative_day_heatmap_data,
 
 ## Cut participants 
 # from samples_analysis.R
-(ids15)
-unique(no_menses_data$biome_id)
+# (ids15)
+# unique(no_menses_data$biome_id)
 # ids15
 # 
 # relative_day_heatmap_data <- heatmap_data %>%

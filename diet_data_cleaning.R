@@ -10,13 +10,13 @@ library(tidyverse)
 library(jsonlite)
 library(utils)
 
-original_dh_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 6-DH Food.csv", header = TRUE)
-avi_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/AVI Foods (correct) - avi_foods.csv", header = TRUE)
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
-original_bitesnap_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Bitesnap-filtered - Bitesnap-filtered.csv", header = TRUE)
-avi_bd_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/BDNutrition - Sheet1.csv", header = TRUE)
-bd_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/BDNutrition - Sheet3.csv", header = TRUE)
-food_other <- read.csv("/Users/alicezhang/Desktop/microbiome_data/food_other.csv", header = TRUE)
+original_dh_data <- read.csv("/Volumes/T7/microbiome_data/Report 6-DH Food.csv", header = TRUE)
+avi_data <- read.csv("/Volumes/T7/microbiome_data/AVI Foods (correct) - avi_foods.csv", header = TRUE)
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+original_bitesnap_data <- read.csv("/Volumes/T7/microbiome_data/Bitesnap-filtered - Bitesnap-filtered.csv", header = TRUE)
+avi_bd_data <- read.csv("/Volumes/T7/microbiome_data/BDNutrition - Sheet1.csv", header = TRUE)
+bd_mapping <- read.csv("/Volumes/T7/microbiome_data/BDNutrition - Sheet3.csv", header = TRUE)
+food_other <- read.csv("/Volumes/T7/microbiome_data/food_other.csv", header = TRUE)
 
 ## Merge avi_data and avi_bd_data
 mapped_avi_bd_data <- avi_bd_data %>% 
@@ -265,7 +265,7 @@ m_cleaned <- m_cleaned %>%
 
 ### Save final data output
 write.csv(m_cleaned,
-          file = "/Users/alicezhang/Desktop/microbiome_data/manual_merged_diet_data.csv",
+          file = "/Volumes/T7/microbiome_data/manual_merged_diet_data.csv",
           row.names = FALSE)
 
 ################################################################################################

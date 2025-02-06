@@ -152,3 +152,116 @@ heatmap_plot2 <- function(data){
     )
   
 }
+
+#' menstruation heat map plot - 10 level version & fecal samples
+#'
+#' @param data input
+#' 
+#' @export
+heatmap_plot_fecal <- function(data){
+  
+  all_days <- seq.Date(
+    as.Date(min(names(data)[grepl("^2022-", names(data))])), 
+    as.Date(max(names(data)[grepl("^2022-", names(data))])), 
+    by = "day"
+  )
+  all_days <- as.character(all_days)
+  
+  data <- data %>%
+    mutate(
+      menstruating_days_count = rowSums(
+        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        , na.rm = TRUE)
+    )
+  
+  heatmap_data <- data %>%
+    select(biome_id, menstruating_days_count, starts_with("2022-")) %>%
+    pivot_longer(
+      cols = starts_with("2022-"),
+      names_to = "logDate",
+      values_to = "value"
+    ) %>%
+    mutate(
+      logDate = as.character(logDate)
+    )
+  
+  # return plot
+  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+    geom_tile(color = "black") +
+    scale_fill_manual(
+      values = c("1" = "red3", "2" = "pink", "3"="darkred", "4"="darkblue", 
+                 "5"="black","6"="blue",
+                 "7"="red2", "8" = "white", # 8 is turned into NA
+                 "9"="orchid", "10"="slateblue1", "50"="yellow"),
+      na.value = "white",
+      name = "Value"
+    ) +
+    labs(
+      x = " ",
+      y = " ",
+      title = " "
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1),
+      panel.grid = element_blank()
+    )
+  
+}
+
+#' menstruation heat map plot - Imputation
+#'
+#' @param data input
+#' 
+#' @export
+heatmap_plot_imputation <- function(data){
+  
+  all_days <- seq.Date(
+    as.Date(min(names(data)[grepl("^2022-", names(data))])), 
+    as.Date(max(names(data)[grepl("^2022-", names(data))])), 
+    by = "day"
+  )
+  all_days <- as.character(all_days)
+  
+  data <- data %>%
+    mutate(
+      menstruating_days_count = rowSums(
+        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        , na.rm = TRUE)
+    )
+  
+  heatmap_data <- data %>%
+    select(biome_id, menstruating_days_count, starts_with("2022-")) %>%
+    pivot_longer(
+      cols = starts_with("2022-"),
+      names_to = "logDate",
+      values_to = "value"
+    ) %>%
+    mutate(
+      logDate = as.character(logDate)
+    )
+  
+  # return plot
+  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+    geom_tile(color = "black") +
+    scale_fill_manual(
+      values = c("1" = "red3", "2" = "pink", "3"="darkred", "4"="darkblue", 
+                 "5"="black","6"="blue",
+                 "7"="red2", "8" = "white", # 8 is turned into NA
+                 "9"="orchid", "10"="slateblue1", "50"="yellow",
+                 "78"="purple"),
+      na.value = "white",
+      name = "Value"
+    ) +
+    labs(
+      x = " ",
+      y = " ",
+      title = " "
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1),
+      panel.grid = element_blank()
+    )
+  
+}

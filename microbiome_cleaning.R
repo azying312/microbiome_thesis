@@ -179,6 +179,8 @@ saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced
 
 bacteria_physeq_no_contam <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_decontam.rds")
 
+# Get number of reads
+
 # old data only
 # bacteria_physeq_no_contam <- subset_taxa(
 #   bacteria_physeq_no_contam,

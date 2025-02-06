@@ -125,7 +125,7 @@ menses_data_collapsed <- menses_data %>%
 history_data_subset <- history_data_subset %>% 
   left_join(menses_data_collapsed, by=as.character("biome_id"))
 history_data_subset <- history_data_subset %>% 
-  mutate(survey_menstruate=ifelse(is.na(minn_menstruate), survey_menstruate, minn_menstruate)) %>% 
+  mutate(study_menstruate=ifelse(is.na(minn_menstruate), survey_menstruate, minn_menstruate)) %>% 
   select(!minn_menstruate)
 
 ## Dietary Habits Cleaning
@@ -178,23 +178,42 @@ history_data_subset <- history_data_subset %>%
   select(!is_vegetarian) %>% 
   mutate(dietary_habits=ifelse(dietary_habits=="Vegetarian", 1, ifelse(dietary_habits=="Omnivore", 0, dietary_habits)))
 
-table(history_data_subset_2$is_vegetarian, history_data_subset$dietary_habits)
+## Birth Control
+history_data_subset$birthControl[history_data_subset$birthControl=="" | 
+                                   history_data_subset$birthControl=="None"] <- "None"
+history_data_subset$birthControl[history_data_subset$birthControl=="Combination birth control pill"] <- "Systemic Combined (E&P)"
+history_data_subset$birthControl[history_data_subset$birthControl=="Contraceptive implant (Nexplanon)" | 
+                                   history_data_subset$birthControl=="Progesterone (Aygestin, provera, depo-provera, mini progestin-only birth control pill or norethindrone)"] <- "Systemic P only"
+history_data_subset$birthControl[history_data_subset$birthControl=="Hormonal intrauterine device (Liletta, Skyla, Kyleena, or Mirena IUD)"
+                     | history_data_subset$birthControl =="Vaginal ring"] <- "Local P"
 
-# omnv_idx <- which(history_data_subset$dietary_habits=="Omnivore")
-# diet_o <- diet_data %>% 
-#   filter(study_id %in% omnv_idx) %>% 
-#   select(study_id, Date, type, name, caloriesall, vegetarian) %>% 
-#   group_by(study_id) %>% 
-#   summarise(all_vegetarian=all(vegetarian)) %>% 
-#   filter(all_vegetarian==TRUE)
-# 
-# diet40 <- diet_data %>% 
-#   filter(study_id %in% diet_o$study_id) %>% 
-#   select(study_id, Date, type, name, caloriesall, vegetarian) 
+unique(history_data_subset$birthControl) # Orilissa (Elagolix) is nonhormonal
+
+## Organize sport to be "off-season", "in-season", or "no sport" 
+history_data_subset$sport[grepl("frisbee", history_data_subset$sport, ignore.case = TRUE)] <- "Ultimate Frisbee"
+history_data_subset$sport[grepl("climbing", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("squash", history_data_subset$sport, ignore.case = TRUE) | 
+                            grepl("Ultimate Frisbee", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("rugby", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("masters swim team at mit", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("equestrian", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("nordic ski", history_data_subset$sport, ignore.case = TRUE)] <- "Club"
+history_data_subset$sport[grepl("tennis", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("crew", history_data_subset$sport, ignore.case = TRUE) | 
+                            grepl("rowing", history_data_subset$sport, ignore.case = TRUE) | 
+                            grepl("basketball", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("lacrosse", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("track", history_data_subset$sport, ignore.case = TRUE)] <- "Off-Season"
+history_data_subset$sport[grepl("no", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("pe class", history_data_subset$sport, ignore.case = TRUE)] <- "None"
+history_data_subset$sport[grepl("field hockey", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("cross country", history_data_subset$sport, ignore.case = TRUE) |
+                            grepl("track", history_data_subset$sport, ignore.case = TRUE)] <- "In-Season"
 
 ### Save final data output
-write.csv(history_data_recode,
+write.csv(history_data_subset,
           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv",
           row.names = FALSE)
-
-# table(history_data_recode$ethnicity)
+# write.csv(history_data_recode,
+#           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv",
+#           row.names = FALSE)

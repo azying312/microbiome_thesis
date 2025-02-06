@@ -185,8 +185,8 @@ heatmap_data <- complete_grid %>%
 ggplot(heatmap_data, aes(x = logDate, y = factor(biome_id), fill = menstruation_numeric)) +
   geom_tile(color = "gray25") +
   scale_fill_gradientn(colors = c("lightblue", "blue", "black"), 
-                       values = scales::rescale(c(0, 1, 2, 3)),  # Adjust values for your scale
-                       na.value = "white") +  # Color for NA values (if any)
+                       values = scales::rescale(c(0, 1, 2, 3)), 
+                       na.value = "white") + 
   labs(title = "Menstruation Heatmap", 
        x = "Date", 
        y = "Biome ID", 

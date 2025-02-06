@@ -7,8 +7,8 @@
 
 library(tidyverse)
 
-med_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 2-Medications.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+med_data <- read.csv("/Volumes/T7/microbiome_data/Report 2-Medications.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
 ### Map uid to study id
 
@@ -38,6 +38,6 @@ View(med_data)
 
 ### Save final data output
 write.csv(med_data,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_med_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_med_data.csv",
           row.names = FALSE)
 

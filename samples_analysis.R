@@ -1,10 +1,12 @@
 library(tidyverse)
 library(ggplot2)
 
-samples.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_samples.csv")
-uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
-survey_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/alice_cleaned_survey_data.csv", header=TRUE)
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+uminn_data <- read.csv("//Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
+survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
 
+saliva <- samples.data %>%  
+  filter(sampleType=="saliva")
 table(samples.data$sampleType)
 
 uminn_data_subset <- uminn_data %>% 
