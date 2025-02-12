@@ -13,19 +13,15 @@ library(tidyverse)
 library(Matrix)
 
 # id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
-fungal.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequenced_data/Walther-Antonio_Project_022_ITS2.rds")
-uminn_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
-samples.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_samples.csv")
-
-# bacterial.data <- readRDS("/Users/alicezhang/Desktop/microbiome_data/sequenced_data/Walther-Antonio_Project_022_16S.rds")
-# bacterial_otu_table <- as.data.frame(otu_table(bacterial.data))
-# View(bacterial_otu_table)
+fungal.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/Walther-Antonio_Project_022_ITS2.rds")
+uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 # uminn_data 
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes, qr)
 
-fungal.data
+# fungal.data
 
 ## Accessors
 ntaxa(fungal.data)

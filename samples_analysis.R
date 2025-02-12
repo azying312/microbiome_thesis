@@ -2,7 +2,8 @@ library(tidyverse)
 library(ggplot2)
 
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
-uminn_data <- read.csv("//Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
+# uminn_data <- read.csv("/Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
+uminn_data <- read.csv("/Volumes/T7/microbiome_data/original_data/UMinn Samples - Sheet1.csv")
 survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
 
 saliva <- samples.data %>%  
@@ -16,29 +17,16 @@ uminn_data_subset$inUminn <- TRUE
 
 ## vaginal samples
 vaginal_data <- samples.data %>% 
-  filter(sampleType=="vaginal") %>% 
-  filter(!is.na(biome_id)) %>%  
-  filter(logDate != "0000-00-00")
-dim(vaginal_data) # 4179 -> 4026
+  filter(sampleType=="vaginal")
+vaginal_data$vaginal_swab <- TRUE # 1536
 
-vaginal_data$vaginal_swab <- TRUE
-
+# note that uminn_data_subset has 67 ppl and doesn't have participant 68 who is in the SILVA pipeline data
+# issue is missing in the uminn data
 vaginal_data <- uminn_data_subset %>% 
-  left_join(vaginal_data, by="qr") # 1558 actual samples
- 
-## Filter out any errors
-vaginal_data <- vaginal_data %>% 
-  filter(logDate!="0000-00-00") %>% # no corresponding logDate
-  mutate(uMinn_menstruation=ifelse(str_detect(Special.Notes, "Blood")==TRUE, 1, 0)) %>%  # set to menstruation true
-  select(biome_id, logDate, qr, timestamp, uMinn_menstruation, inUminn, vaginal_swab, Special.Notes) %>% 
-  mutate(biome_id=as.numeric(biome_id)) %>% 
-  # errors in sample processing from UMinn
-  filter(!str_detect(Special.Notes, "error")) %>% 
-  filter(!str_detect(Special.Notes, "No swab in tube")) %>% 
-  filter(!is.na(biome_id))
+  left_join(vaginal_data, by="qr") %>%  # 1536 actual samples
+  filter(vaginal_swab==TRUE) # there might be dupe QR codes
 
 ## Get duplicates
-
 vaginal_data_diff <- vaginal_data %>%
   mutate(logDate = as.Date(timestamp),
          timestamp = as.POSIXct(timestamp, format = "%Y-%m-%d %H:%M:%S")) %>% 
@@ -50,18 +38,14 @@ vaginal_data_diff <- vaginal_data %>%
   ) %>%
   ungroup()
 
+# Get time difference between samples on the same day for a given participant
 identical_vaginal_data <- vaginal_data_diff %>% 
   group_by(biome_id, logDate) %>%
-  filter(n() == 2) %>%
-  mutate(UMinn_mismatch = uMinn_menstruation[1] != uMinn_menstruation[2]) %>%
-  filter(UMinn_mismatch == TRUE) %>% 
+  filter(n() == 2) %>% 
   mutate(
     time_diff = as.numeric(difftime(timestamp, lag(timestamp), units = "mins"))
   ) %>%
-  # filter(n() > 1) %>%
   ungroup() 
-
-# View(identical_vaginal_data)
 
 # Filtering
 count_vaginal_data_diff <- vaginal_data_diff %>% 
@@ -69,7 +53,9 @@ count_vaginal_data_diff <- vaginal_data_diff %>%
   mutate(count=n()) %>% 
   filter(count > 11) %>% 
   ungroup()
+
 dim(count_vaginal_data_diff)
+
 length(unique(vaginal_data_diff$biome_id)) # 67
 length(unique(count_vaginal_data_diff$biome_id)) # 49
 

@@ -25,7 +25,6 @@ menses_data <- menses_data %>%
   rename("biome_id" = "uid")
 menses_data <- study_mapping(menses_data, id_mapping)
 
-
 # DATA CLEANING
 menses_data_cleaned <- menses_data %>% 
   filter(menstruation!="") %>% 
@@ -56,6 +55,10 @@ uminn_data_subset$inUminn <- TRUE
 # match uminn samples with blood to vaginal samples
 vaginal_samples <- samples_data %>% 
   filter(sampleType=="vaginal")
+
+# uminn_data_subset <- uminn_data_subset %>% 
+#   left_join(samples_data, by="qr") %>% 
+#   filter(!is.na(sampleType))
 
 # keep all the vaginal samples, mark uminn menstruation by if there is blood
 uminn_data_subset <- uminn_data_subset %>% 

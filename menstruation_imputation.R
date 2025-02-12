@@ -53,6 +53,7 @@ menses_data <- survey_data %>%
   left_join(collapsed_days, by="biome_id")
 
 ## Plot Initial Data
+# heatmap_plot(menses_data)
 heatmap_plot1(menses_data)
 
 ####################################################################
@@ -134,9 +135,9 @@ collapsed_days <- full_data %>%
 
 # Menstruation Data
 imputation_data <- survey_data %>% 
-  left_join(collapsed_days, by="biome_id") %>% 
+  left_join(collapsed_days, by="biome_id") #%>% 
   # get only ppl that menstruated throughout study
-  filter(biome_id %in% participants_to_impute) #%>%
+  # filter(biome_id %in% participants_to_impute) #%>%
   # mutate(regular_periods=ifelse(is.na(regular_periods), 0, regular_periods))
 
 heatmap_plot2(imputation_data)
@@ -182,6 +183,10 @@ heatmap_plot_fecal(irregular_cycle_df)
 
 ####################################################################
 # Imputation pt. 5: Add imputed dates (fecal samples not represented here)
+
+# volunteer.df_subset <- volunteer.df %>% 
+#   select(biome_id, birthControl, survey_menstruate, regular_periods, irreg_period_notes, period_len, study_menstruate, sexuallyActive)
+# View(volunteer.df_subset %>% filter(biome_id==48))
 
 # Regular (self-reported); person 66, 16, 14, 58, 49, 55, 51, 29, 15, 52, 37, 9 can't really impute
 # person 50, 17, 4 no impute needed
@@ -259,5 +264,5 @@ heatmap_plot_imputation(imputation_data_v2)
 
 ### Save final data output
 write.csv(imputation_data_v2,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv",
           row.names = FALSE)

@@ -5,34 +5,25 @@ library(Matrix)
 
 # bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/Walther-Antonio_Project_022_16S.rds")
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/Walther-Antonio_Project_022_16S_SILVA138.rds")
-uminn_data <- read.csv("/Volumes/T7/microbiome_data/Swabs with blood - Sheet1.csv", header=TRUE)
+uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
-
+                          
 bacterial_otu_table <- otu_table(bacterial.data)
 bacterial_tax_table <- tax_table(bacterial.data)
 
 ## Metadata
-
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes) %>% 
   mutate(qr=sub("_.*", "", Sample.ID))
 
-# Data Cleaning
-# uminn_data_keep <- uminn_data %>% 
-#   filter(str_detect(Special.Notes, "error") | str_detect(Special.Notes, "No swab in tube")) %>% 
-#   select(Sample.ID, Special.Notes, qr)
-
 metadata_bacteria <- data.frame(
   SampleID = colnames(bacterial_otu_table),
   is_blank = grepl("BLANK", colnames(bacterial_otu_table)),
-  stringsAsFactors = FALSE
-) %>%
+  stringsAsFactors = FALSE) %>%
   mutate(qr = sub("\\_.*", "", SampleID))
 
 metadata_bacteria <- metadata_bacteria %>% 
   left_join(samples.data, by="qr")
-# metadata_bacteria <- metadata_bacteria %>% 
-#   mutate(sampleType=ifelse(is_blank, "BLANK", sampleType))
 rownames(metadata_bacteria) <- metadata_bacteria$SampleID
 
 # Set sample data
@@ -40,18 +31,15 @@ sample_data_obj <- sample_data(metadata_bacteria)
 
 ## Saving as new obj
 bacteria_physeq <- phyloseq(bacterial_otu_table, sample_data_obj, bacterial_tax_table)
+table(metadata_bacteria$is_blank)
 
-# # Save new obj
-# saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_intermediary.rds")
-
-### Data Cleaning
 bacteria_physeq_otu <- otu_table(bacteria_physeq)
 
 ## Filter out error data - filter samples
 uminn_data_keep <- uminn_data %>% 
   filter(str_detect(Special.Notes, "error") | str_detect(Special.Notes, "No swab in tube")) %>% 
   select(Sample.ID, Special.Notes, qr)
-otu_table_bacteria<- as.data.frame(t(bacteria_physeq_otu))
+otu_table_bacteria <- as.data.frame(t(bacteria_physeq_otu))
 dim(otu_table_bacteria) # 3659 122403
 
 sample_ids <- rownames(otu_table_bacteria)
@@ -60,15 +48,17 @@ length(sample_ids) # 3659
 
 # Prune samples that had errors
 samples_to_keep <- !sample_ids %in% uminn_data_keep$qr
+
 t_bacterial_otu_table <- t(bacterial_otu_table)
 physeq_no_error <- prune_samples(samples_to_keep, t_bacterial_otu_table)
 
 # Prep for decontam
 physeq_no_error_otu <- otu_table(physeq_no_error)
-# physeq_no_error_otu_t <- t(physeq_no_error_otu)
 physeq_no_error_otu_df <- as.data.frame(physeq_no_error_otu)
 
-# physeq_no_error_tax <- tax_table(physeq_no_error)
+# Save new obj
+# save.image("/Volumes/T7/microbiome_data/R_environments/microbiome_cleaningv1.RData")
+# load("/Volumes/T7/microbiome_data/R_environments/microbiome_cleaningv1.RData")
 
 # Sample data
 metadata_bacteria <- data.frame(
@@ -85,23 +75,17 @@ rownames(metadata_bacteria) <- metadata_bacteria$SampleID
 otu_table_obj <- otu_table(physeq_no_error_otu_df, taxa_are_rows = FALSE)
 sample_data_obj <- sample_data(metadata_bacteria)
 
-otu_names <- taxa_names(otu_table_obj)
-tax_names <- rownames(bacterial_tax_table)
-
 ## Saving as new obj
 bacteria_physeq <- phyloseq(otu_table_obj, sample_data_obj, bacterial_tax_table)
 
 # Save new obj
-saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
+saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
+# saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
 # saveRDS(bacteria_physeq, file = "/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 
-### Filter out vaginal data
-library(phyloseq)
-library(decontam)
-library(tidyverse)
-library(Matrix)
+bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
 
-bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
+# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 

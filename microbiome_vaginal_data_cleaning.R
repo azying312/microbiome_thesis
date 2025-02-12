@@ -1,17 +1,9 @@
-library(dplyr)
+# library(dplyr)
 library(phyloseq)
-library(vegan)
-library(pheatmap)
+# library(vegan)
+# library(pheatmap)
 library(tidyverse)
 library(Matrix)
-
-library(ggplot2)
-
-library(cluster)
-library("igraph")
-library("markovchain")
-library("RColorBrewer")
-library("gridExtra")
 
 # Use corrected data after
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleaned.rds")
@@ -24,22 +16,22 @@ head(otu.22[1:10,1:10])
 dim(otu.22)
 
 # Initial Reads
-total_reads_initial <- sum(otu.22) # 173324711
+total_reads_initial <- sum(otu.22) # 131030981
 
 # number of reads per taxa
 taxa_total_reads <- taxa_sums(bacterial.data)
 taxa_sample_presence <- colSums((otu.22) > 0) # 0 - taxon absent in sample; 1 - taxon in sample -- then sum
 
 ## Filter data
-# Identify non-rare taxa to keep (Callahan paper: present in at least 3 samples and ≥100 total reads)
-keep_taxa <- (taxa_total_reads >= 100) & (taxa_sample_presence >= 3)
+# Identify non-rare taxa to keep (present in at least 3 samples)
+keep_taxa <- (taxa_sample_presence >= 3)
 bacterial.data.filtered <- prune_taxa(keep_taxa, bacterial.data)
 
 # Save new obj
 saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv2.rds")
 
 total_reads_after <- sum(otu_table(bacterial.data.filtered))
-total_reads_after # 172889277 (435434 reads removed)
+total_reads_after # 130739221 (291760 reads removed)
 
 # Percent removed
 total_reads_initial-total_reads_after
