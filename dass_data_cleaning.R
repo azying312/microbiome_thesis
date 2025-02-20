@@ -7,8 +7,8 @@
 
 library(tidyverse)
 
-dass_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 10-DASS-21.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+dass_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 10-DASS-21.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
 ### Map uid to study id
 
@@ -35,4 +35,10 @@ missing_list <- dass_data %>%
 print(unique(missing_list$biome_id))
 
 dim(dass_data)
+
+### Save final data output
+write.csv(dass_data,
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_dass.csv",
+          row.names = FALSE)
+
 

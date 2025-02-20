@@ -14,8 +14,8 @@ library(stringr)
 source("~/Microbiome Thesis/functions.R")
 
 # Load data
-menses_data <- read.csv("/Volumes/T7/microbiome_data/Report 1-Menstruation.csv")
-id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+menses_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 1-Menstruation.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)

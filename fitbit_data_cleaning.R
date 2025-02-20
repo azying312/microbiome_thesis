@@ -5,52 +5,31 @@
 #
 #########################
 
+source("~/Microbiome Thesis/functions.R")
+
 library(tidyverse)
 
-activity.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 4-Physical Activity.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+activity.data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 4-Physical Activity.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
-head(activity.data)
-head(id_mapping)
 
-### Mapping IDs
-study_and_u_id <- unique(id_mapping %>% 
-                           select(STUDY.ID, Biome.Health.App.ID))
-study_and_u_id <- study_and_u_id %>% 
-  rename("study_id" = "STUDY.ID") %>% 
-  rename("biome_id" = "Biome.Health.App.ID")
-
-activity.data <- activity.data %>% 
+# Data Prep
+activity.data <- activity.data %>%
   rename("biome_id" = "uid")
-
-study_and_u_id$study_id <- as.character(study_and_u_id$study_id)
-
-studyID_activity_data <- activity.data %>%
-  left_join(study_and_u_id, by = "biome_id") %>%
-  mutate(biome_id = coalesce(study_id, biome_id)) %>%
-  select(-study_id)
-
-### Some IDs are missing
-missing_list <- studyID_activity_data %>%
-  filter(is.na(as.numeric(biome_id)))
-print(unique(missing_list$biome_id))
-
-# Only keep numeric IDs
-studyID_activity_data$biome_id <- as.numeric(studyID_activity_data$biome_id)
-studyID_activity_data <- studyID_activity_data %>% 
-  filter(!is.na(biome_id)) %>% 
-  select(-id)
+activity.data <- study_mapping(activity.data, id_mapping)
 
 ### Cleaning
-studyID_activity_data$activity_date <- as.Date(studyID_activity_data$activity_date, format='%Y-%m-%d')
-studyID_activity_data$calories_burned <- as.numeric(gsub(",", "", studyID_activity_data$calories_burned))
-studyID_activity_data$steps <- as.numeric(gsub(",", "", studyID_activity_data$steps))
-studyID_activity_data$minutes_sedentary <- as.numeric(gsub(",", "", studyID_activity_data$minutes_sedentary))
-studyID_activity_data$activity_calories <- as.numeric(gsub(",", "", studyID_activity_data$activity_calories))
+activity.data <- activity.data %>% 
+  rename(logDate=activity_date) %>% 
+  select(!c(id, mod_timestamp))
+activity.data$calories_burned <- as.numeric(gsub(",", "", activity.data$calories_burned))
+activity.data$steps <- as.numeric(gsub(",", "", activity.data$steps))
+activity.data$minutes_sedentary <- as.numeric(gsub(",", "", activity.data$minutes_sedentary))
+activity.data$activity_calories <- as.numeric(gsub(",", "", activity.data$activity_calories))
 
 ### Save final data output
-write.csv(studyID_activity_data,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv",
+write.csv(activity.data,
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv",
           row.names = FALSE)
 
 # Week Variable

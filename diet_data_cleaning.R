@@ -5,18 +5,20 @@
 #
 #########################
 
+source("~/Microbiome Thesis/functions.R")
+
 # Packages
 library(tidyverse)
 library(jsonlite)
 library(utils)
 
-original_dh_data <- read.csv("/Volumes/T7/microbiome_data/Report 6-DH Food.csv", header = TRUE)
-avi_data <- read.csv("/Volumes/T7/microbiome_data/AVI Foods (correct) - avi_foods.csv", header = TRUE)
-id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
-original_bitesnap_data <- read.csv("/Volumes/T7/microbiome_data/Bitesnap-filtered - Bitesnap-filtered.csv", header = TRUE)
-avi_bd_data <- read.csv("/Volumes/T7/microbiome_data/BDNutrition - Sheet1.csv", header = TRUE)
-bd_mapping <- read.csv("/Volumes/T7/microbiome_data/BDNutrition - Sheet3.csv", header = TRUE)
-food_other <- read.csv("/Volumes/T7/microbiome_data/food_other.csv", header = TRUE)
+original_dh_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 6-DH Food.csv", header = TRUE)
+avi_data <- read.csv("/Volumes/T7/microbiome_data/original_data/AVI Foods (correct) - avi_foods.csv", header = TRUE)
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+original_bitesnap_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Bitesnap-filtered - Bitesnap-filtered.csv", header = TRUE)
+avi_bd_data <- read.csv("/Volumes/T7/microbiome_data/original_data/BDNutrition - Sheet1.csv", header = TRUE)
+bd_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/BDNutrition - Sheet3.csv", header = TRUE)
+food_other <- read.csv("/Volumes/T7/microbiome_data/original_data/food_other.csv", header = TRUE)
 
 ## Merge avi_data and avi_bd_data
 mapped_avi_bd_data <- avi_bd_data %>% 
@@ -31,29 +33,10 @@ merged_avi_data <- avi_data %>%
 
 ### Recode uid to numbers 1-75
 
-# Get unique study and biome health pairings
-study_and_u_id <- unique(id_mapping %>% 
-  select(STUDY.ID, Biome.Health.App.ID))
-
-# Match and join columns
-study_and_u_id <- study_and_u_id %>% 
-  rename("study_id" = "STUDY.ID") %>% 
-  rename("biome_id" = "Biome.Health.App.ID")
-
-original_dh_data <- original_dh_data %>% 
+# Data Prep
+original_dh_data <- original_dh_data %>%
   rename("biome_id" = "uid")
-
-study_and_u_id$study_id <- as.character(study_and_u_id$study_id)
-
-studyID_dh_data <- original_dh_data %>%
-  left_join(study_and_u_id, by = "biome_id") %>%
-  mutate(biome_id = coalesce(study_id, biome_id)) %>%
-  select(-study_id)
-
-### Some IDs are missing
-missing_list <- studyID_dh_data %>%
-  filter(is.na(as.numeric(biome_id)))
-print(unique(missing_list$biome_id))
+studyID_dh_data <- study_mapping(original_dh_data, id_mapping)
 
 ### Splitting days into individual item entries
 # Onerow generates warnings if there are IDs that are not numbers (beverages & desserts)
@@ -175,7 +158,8 @@ food_other_df <- food_other %>%
 
 ### Append big and food_other
 food_other_df_cleaned <- food_other_df %>%
-  mutate(food_other = TRUE)
+  mutate(food_other = TRUE) %>% 
+  mutate(study_id=as.numeric(study_id))
 big <- big %>%
   mutate(food_other = FALSE) %>% 
   mutate(caloriesFromSatFat=as.numeric(caloriesFromSatFat))
@@ -195,15 +179,9 @@ big_cleaned <- big_cleaned %>%
   filter(!is.na(type))
 
 #### Bitesnap Data
-# map uid to study_id
 bitesnap_data <- original_bitesnap_data %>% 
   rename("biome_id" = "uid")
-
-studyID_bitesnap_data <- bitesnap_data %>%
-  left_join(study_and_u_id, by = "biome_id") %>%
-  mutate(biome_id = coalesce(study_id, biome_id)) %>%
-  select(-study_id) %>% 
-  rename("study_id" = "biome_id")
+studyID_bitesnap_data <- study_mapping(bitesnap_data, id_mapping)
 
 #use times to make a meal column 
 #how many meals per person? 
@@ -262,10 +240,12 @@ m_cleaned$caloriesFromSatFat <- as.numeric(m_cleaned$caloriesFromSatFat)
 m_cleaned <- m_cleaned %>% 
   select(where(~ !all(is.na(.)))) %>% 
   filter(m_cleaned$name!="")
+# m_cleaned <- m_cleaned %>% 
+#   rename(biome_id=study_id)
 
-### Save final data output
+### Save final datstudy_id### Save final data output
 write.csv(m_cleaned,
-          file = "/Volumes/T7/microbiome_data/manual_merged_diet_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/manual_merged_diet_data.csv",
           row.names = FALSE)
 
 ################################################################################################

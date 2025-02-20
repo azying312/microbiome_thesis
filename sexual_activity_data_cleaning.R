@@ -7,8 +7,8 @@
 
 library(tidyverse)
 
-sex_act_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 3-Sexual Activity.csv")
-id_mapping <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+sex_act_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 3-Sexual Activity.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
 ### Map uid to study id
 
@@ -38,6 +38,6 @@ dim(sex_act_data)
 
 ### Save final data output
 write.csv(sex_act_data,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 3-Sexual Activity.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 3-Sexual Activity.csv",
           row.names = FALSE)
 

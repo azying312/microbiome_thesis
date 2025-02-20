@@ -12,6 +12,64 @@ lapply(packs, require, character.only = TRUE)
 ## Load Data
 merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
 
+##########################################################################################
+# Visualize diet completeness map
+
+merged_diet_data <- merged_diet_data %>% 
+  mutate(Date=as.Date(Date)) %>% 
+  filter(Date < as.Date("2022-12-17")) 
+
+all_days <- seq.Date(as.Date(min(merged_diet_data$Date, na.rm=TRUE)), 
+                     as.Date(max(merged_diet_data$Date, na.rm=TRUE)), by = "day")
+
+# Expand to include all days
+expanded_data <- expand.grid(biome_id = unique(merged_diet_data$biome_id), Date = all_days)
+expanded_data <- left_join(expanded_data, merged_diet_data, by = c("biome_id", "Date"))
+
+diet_data_subset <- merged_diet_data %>% 
+  select(biome_id, Date, type, name, caloriesall, proteinall, sugarsall, fatall, food_other)
+
+# get meals per day (only 3 meals max)
+meals_per_day <- diet_data_subset %>%
+  filter(type %in% c("breakfast", "lunch", "dinner")) %>% 
+  group_by(biome_id, Date) %>%
+  summarize(
+    MealsPerDay = n_distinct(type),
+    .groups = "drop"
+  ) %>% 
+  mutate(study_id=as.numeric(biome_id)) %>% 
+  filter(!is.na(biome_id))
+
+complete_grid <- expand.grid(biome_id = unique(meals_per_day$biome_id),
+                             Date = all_days)
+heatmap_data <- complete_grid %>%
+  left_join(meals_per_day, by = c("biome_id", "Date"))
+
+## All days plot
+# heatmap_data$Value <- ifelse((is.na(heatmap_data$type)), "Not menstruating", "Menstruating")
+# heatmap_data$Value <- factor(heatmap_data$Value, levels = c("Not menstruating", "Menstruating"))
+
+heatmap_data_plot <- heatmap_data %>% 
+  group_by(biome_id) %>%
+  mutate(meals_count = sum(MealsPerDay, na.rm = TRUE)) %>%
+  mutate(MealsPerDay=ifelse(is.na(MealsPerDay), 0, MealsPerDay)) %>% 
+  mutate(MealsPerDay=as.factor(MealsPerDay)) %>% 
+  arrange(desc(meals_count), biome_id) %>% 
+  ungroup()
+
+# all dates showing
+ggplot(heatmap_data_plot, aes(x = as.factor(Date), y = reorder(factor(biome_id), meals_count), fill = MealsPerDay)) +
+  geom_tile(color = "gray25") +
+  scale_fill_manual(values = c("white", "lightblue", "blue", "darkblue"), 
+                    na.value = "white")+
+  labs(title = " ", 
+       x = "Date", 
+       y = "Biome ID", 
+       fill = "Number of Meals") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+
+##########################################################################################
 sum(is.na(merged_diet_data$serving.size))
 dim(merged_diet_data)
 sum(is.na(merged_diet_data$servings))
@@ -59,19 +117,63 @@ unique_vegetarian_pairs <- merged_diet_data %>%
 
 ## Check if participant vegetarian
 participant_vegetarian_status <- merged_diet_data %>%
-  group_by(study_id) %>%
+  group_by(biome_id) %>%
   # Check if all foods for a participant are vegetarian
   summarise(is_vegetarian = all(vegetarian))  
-participant_vegetarian_status$study_id <- as.numeric(participant_vegetarian_status$study_id)
+participant_vegetarian_status$biome_id <- as.numeric(participant_vegetarian_status$biome_id)
 participant_vegetarian_status <- participant_vegetarian_status %>%
   drop_na()
 
-table(participant_vegetarian_status$is_vegetarian) # 7 vegetarian
+table(participant_vegetarian_status$is_vegetarian) # 9 vegetarian
 
 # Add to diet data
-participant_vegetarian_status$study_id <- as.character(participant_vegetarian_status$study_id)
+# participant_vegetarian_status$study_id <- as.character(participant_vegetarian_status$study_id)
 merged_diet_data <- merged_diet_data %>%
-  left_join(participant_vegetarian_status, by = "study_id")
+  left_join(participant_vegetarian_status, by = "biome_id")
+
+##########################################################################################
+merged_diet_data_vegetarian <- merged_diet_data %>% 
+  select(biome_id, is_vegetarian) %>% 
+  distinct(biome_id, is_vegetarian)
+
+# Correlate with vegetarian status and vaginal microbiome
+vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+vaginal.microbial.menses.24 <- vaginal.microbial.menses.24[,-1]
+
+vaginal.microbial.menses.24.veg <- vaginal.microbial.menses.24 %>% 
+  left_join(merged_diet_data_vegetarian, by="biome_id")
+
+vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon=sum(shannon)/n())
+
+vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24.summary %>% 
+  left_join(merged_diet_data_vegetarian, by="biome_id")
+vaginal.microbial.menses.24.summary %>% 
+  filter(is.na(is_vegetarian))
+
+vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24.summary %>% 
+  filter(!is.na(is_vegetarian)) %>% 
+  mutate(is_vegetarian_bin=ifelse(is_vegetarian==TRUE, "Vegetarian", "Non-vegetarian")) 
+
+table(vaginal.microbial.menses.24.summary$is_vegetarian_bin)
+
+ggplot(vaginal.microbial.menses.24.summary, aes(x = is_vegetarian_bin, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+# testing
+t.test(avg_shannon ~ is_vegetarian, data=vaginal.microbial.menses.24.summary)
+wilcox.test(avg_shannon ~ is_vegetarian, data = vaginal.microbial.menses.24.summary)
+
+##########################################################################################
 
 # For a participant on a given day, get cals that are vegetarian v. not vegetarian
 # collapse data into foods for that participant by day and the percent of food that is vegetarian

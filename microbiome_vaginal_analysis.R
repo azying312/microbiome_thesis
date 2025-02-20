@@ -12,9 +12,13 @@ library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
+
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
 
 ###############################################################################################
+
+bacteria_taxa_df <- tax_table(bacterial.data)
+bacteria_metadata_df <- sample_data(bacterial.data)
 
 #### Exploratory Data Analysis
 
@@ -50,29 +54,13 @@ max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
 # Map most abundant OTU to the sample data
 bacteria_metadata_df$max_taxa <- max_taxa
 
-###################################################################################################
-
-bacteria_taxa_table <- tax_table(bacterial.data)
-bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
-
-################## FASTA
-fasta.file <- "/Volumes/T7/microbiome_data/sequenced_data/otu_seq.fasta"
-# Get unique max taxa to BLAST
-blast_taxa <- unique(bacteria_metadata_df$max_taxa)
-blast_sequences <- bacteria_taxa_df[blast_taxa, "sequence", drop=FALSE]
-sink(fasta.file)
-for (otu_id in rownames(blast_sequences)) {
-  cat(paste0(">", otu_id, "\n", blast_sequences[otu_id, "sequence"], "\n"))
-}
-sink()
-############################################################
-
 # Get max taxa names
-bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "Species_exact"]) # 2039 samples
+# bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "Species_exact"]) # 2039 samples
+bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "BLAST_species"])
 
 # Set sample data in phyloseq obj
 sample_data(bacterial.data) <- bacteria_metadata_df
-bacteria_taxa_table <- as.data.frame(bacteria_taxa_table)
+# bacteria_taxa_df <- as.data.frame(bacteria_taxa_df)
 
 # Assign CST col
 bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
@@ -101,6 +89,10 @@ colnames(sample.cst) <- "CST"
 rownames(sample.cst) <- rownames(bacteria_metadata_df)
 sample.cst$SampleID <- rownames(sample.cst)
 
+###################################################################################################
+
+bacteria_taxa_table <- tax_table(bacterial.data)
+bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
 ########################################################
 
 bacteria_metadata_df <- sample_data(bacterial.data)
@@ -131,7 +123,8 @@ shannon.cst.qr.merged.24 <- merge(sample.cst, shannon.qr.merged.24, by="SampleID
 # save.image("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
 
 ###########################################################################
-
+library(tidyverse)
+library(viridis)
 # load("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
 
 ### Check UMinn Spreadsheet v. Sequenced Data
@@ -195,19 +188,19 @@ cst_plt <- ggplot(shannon.cst.summary, aes(x=factor(biome_id, levels=id_order$bi
   labs(x = "Participant", y = "Proportion of Samples", fill = "CST") +
   theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
   theme(legend.position = "bottom")
-  # CST label overlay
-  # geom_tile(data = dominant_cst, aes(x = factor(biome_id, levels = id_order$biome_id), y = -0.1, fill = CST), height = 0.05) +
-  # theme(legend.position = "right")
+# CST label overlay
+# geom_tile(data = dominant_cst, aes(x = factor(biome_id, levels = id_order$biome_id), y = -0.1, fill = CST), height = 0.05) +
+# theme(legend.position = "right")
 cst_plt
 
 ## Heatmap of CSTs for each participant
 CST_tbl <- as.data.frame(table(shannon.cst.qr.merged.24$biome_id, shannon.cst.qr.merged.24$CST))
 colnames(CST_tbl) <- c("biome_id", "CST", "Frequency")
-ggplot(CST_tbl, aes(x=as.factor(biome_id), y=as.factor(CST), fill=Frequency)) +
+ggplot(CST_tbl, aes(y=as.factor(biome_id), x=as.factor(CST), fill=Frequency)) +
   geom_tile(color="black") +
   scale_fill_viridis(option="C", direction=1) +
   theme_minimal() +
-  labs(x="Participant", y="CST", title="", fill="Frequency")
+  labs(y="Participant", x="CST", title="", fill="Frequency")
 
 ## Species abundance visualization -- come back to this
 # find which ppl have most samples submitted - try person 17
@@ -234,6 +227,8 @@ vaginal.microbial.menses.24 <- shannon.cst.qr.merged.24 %>%
 vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>% 
   mutate(menses_day = ifelse(menses_status %in% c(1,2,3,7,9,78), "menses", 
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA)))
+
+write.csv(vaginal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
 
 ############################################# MISSING DATA ISSUES [RESOLVED - 2/12]
 ## Check missing data
@@ -276,28 +271,84 @@ menses.table.df <- vaginal.microbial.menses.24 %>%
 table(menses.table.df$biome_id, menses.table.df$menses_day)
 
 wilcox.test(filter_id_data(menses.table.df, 17)$shannon ~ filter_id_data(menses.table.df, 17)$menses_day)
+wilcox.test(filter_id_data(menses.table.df, 17)$shannon ~ filter_id_data(menses.table.df, 17)$menses_day)
 
-wilcox.df <- vaginal.microbial.menses.24 %>% 
-  group_by(biome_id) %>% 
-  filter(n_distinct(menses_day) > 1) %>% 
-  summarise(
-    p_value=tryCatch(
-      wilcox.test(shannon~menses_day, exact=FALSE)$p.value,
-      error=function(e) NA
-    ),
-    statistic = tryCatch(
-      wilcox.test(shannon ~ menses_day, exact = FALSE)$statistic,
-      error = function(e) NA
-    )
-  ) %>% 
-  arrange(desc(p_value)) %>% 
-  ungroup()
+###
 
-wilcox.df %>% 
-  filter(p_value < 0.001)
+# Plot Shannon diversity over time for each participant
+participant_ids <- unique(vaginal.microbial.menses.24$biome_id)
+all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
+all_days <- data.frame(logDate=as.character(all_days))
+file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/shannon_diversity_logDates/"
+for(id in participant_ids) {
+  # print(id)
+  file_name_id <- paste0(file_path, id, "_id.png")
+  vaginal.microbial.menses.24.participant <- vaginal.microbial.menses.24 %>% 
+    filter(biome_id==id)
+  vaginal.microbial.menses.24.participant <- all_days %>%
+    left_join(vaginal.microbial.menses.24.participant, by = "logDate")
+  vaginal.microbial.menses.24.participant <- vaginal.microbial.menses.24.participant %>% 
+    mutate(menses_day=ifelse(!is.na(menses_day), menses_day, 
+                             ifelse(!is.na(shannon), "not_recorded", NA)))
+  dupe.day <- vaginal.microbial.menses.24.participant %>% 
+    group_by(logDate) %>% 
+    filter(n() > 1) %>% 
+    distinct(logDate)
+  
+  shannon_plt <- ggplot(vaginal.microbial.menses.24.participant, 
+                        aes(x=as.factor(logDate), y=shannon, color=as.factor(menses_day), 
+                            shape=as.factor(menses_day))) +
+    geom_point() +
+    scale_color_manual(values = c("not_menses" = "black", "menses" = "red", "not_recorded" = "purple")) +  
+    scale_shape_manual(values = c("not_menses" = 16, "menses" = 17, "not_recorded"=18)) +
+    ylim(0,3)+
+    # Add lines for the days with multiple samples
+    geom_segment(data = dupe.day, 
+                 aes(x = logDate, xend = logDate, y = -Inf, yend = Inf), 
+                 linetype = "dashed", color = "gray50", inherit.aes = FALSE) +  
+    theme_minimal() +
+    labs(x = "Date", y = "Shannon Index", title=paste(id, "Shannon diversity days")) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  ggsave(file_name_id, shannon_plt, width = 8, height = 6, dpi = 300)
+  
+  print(shannon_plt)
+}
+
+####
 
 # Plot of average shannon for each participant on menses vs. not on menses
-dim(vaginal.microbial.menses.24)
-head(vaginal.microbial.menses.24)
-length(unique(vaginal.microbial.menses.24$biome_id))
+vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>% 
+  group_by(biome_id, menses_day) %>% 
+  summarise(avg_shannon=mean(shannon), .groups="drop") %>% 
+  pivot_wider(names_from = menses_day, values_from = avg_shannon, names_prefix = "menses_day_") %>% 
+  filter(!is.na(menses_day_not_menses) & !is.na(menses_day_menses)) %>% 
+  select(!menses_day_NA)
+
+### Wilcox
+wilcox.test(vaginal.microbial.menses.24.summary$menses_day_not_menses,
+            vaginal.microbial.menses.24.summary$menses_day_menses, paired=TRUE)
+t.test(vaginal.microbial.menses.24.summary$menses_day_not_menses,
+       vaginal.microbial.menses.24.summary$menses_day_menses, paired=TRUE)
+
+
+# plot(vaginal.microbial.menses.24.summary$menses_day_menses, vaginal.microbial.menses.24.summary$menses_day_not_menses)
+
+ggplot(vaginal.microbial.menses.24.summary, aes(x=menses_day_not_menses, y=menses_day_menses)) +
+  geom_point() +
+  xlim(0,3)+
+  ylim(0,3)+
+  geom_abline(slope=1, intercept=0, linetype="dashed") +
+  theme_minimal() +
+  labs(x="Not Menses (Shannon)", y="Menses (Shannon)",
+       title="Average Shannon Diversity for Participants")
+
+##########################################################################################
+# Lifestyle factors
+merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
+activity_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
+
+
+
+
 

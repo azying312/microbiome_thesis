@@ -10,8 +10,8 @@ library(RColorBrewer)
 library(gridExtra)
 
 # Data created in microbiome_vaginal_data_cleaning.R
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
-
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
 otu.22 <- otu_table(bacterial.data)
 tt.22 <- tax_table(bacterial.data)
 tt.df <- as.data.frame(tt.22)
@@ -57,11 +57,11 @@ clust <- as.factor(pam(x, k=K, cluster.only=T))
 # clust[clust==4] <- 2
 # clust[is.na(clust)] <- 4
 
-clust[clust==3] <- NA
-clust[clust==4] <- 3
-clust[is.na(clust)] <- 4
-sample_data(ps)$CST <- clust
-CSTs <- as.character(seq(K))
+# clust[clust==3] <- NA
+# clust[clust==4] <- 3
+# clust[is.na(clust)] <- 4
+# sample_data(ps)$CST <- clust
+# CSTs <- as.character(seq(K))
 
 # Evaluate Clustering
 CSTColors <- brewer.pal(6,"Paired")[c(1,3,2,5,4,6)] # Length 6 for consistency with pre-revision CST+ coloration
@@ -81,7 +81,7 @@ taxa.order <- names(sort(taxa_sums(ps)))
 for(CST in CSTs) {
   pshm <- prune_taxa(names(sort(taxa_sums(ps), T))[1:25], ps)
   pshm <- prune_samples(sample_data(pshm)$CST == CST, pshm)
-  print(plot_heatmap(pshm, taxa.label="Species_exact", taxa.order=taxa.order) + ggtitle(paste("CST:", CST)))
+  print(plot_heatmap(pshm, taxa.label="BLAST_species", taxa.order=taxa.order) + ggtitle(paste("CST:", CST)))
 }
 
 ####

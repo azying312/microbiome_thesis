@@ -8,11 +8,11 @@
 # Packages
 library(tidyverse)
 
-merged_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/no_dupes_diet_data.csv", header = TRUE)
-# merged_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/manual_merged_diet_data.csv", header = TRUE)
-other_food_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/check_dupes_diet_data - check_dupes_diet_data.csv", header = TRUE)
-type_other_food_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/type_other_diet_data - type_other_diet_data.csv", header = TRUE)
-no_nutrition_map <-read.csv("/Users/alicezhang/Desktop/microbiome_data/no_nutrition - no_nutrition.csv", header = TRUE)
+merged_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/no_dupes_diet_data.csv", header = TRUE)
+# merged_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/manual_merged_diet_data.csv", header = TRUE)
+other_food_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/check_dupes_diet_data - handcoded.csv", header = TRUE)
+type_other_food_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/type_other_diet_data - handcoded.csv", header = TRUE)
+no_nutrition_map <-read.csv("/Volumes/T7/microbiome_data/cleaned_data/diet_intermediary/no_nutrition - handcoded.csv", header = TRUE)
 
 merged_data <- merged_data %>% 
   mutate(study_id=as.numeric(study_id),
@@ -97,7 +97,10 @@ m_filtered <- m_filtered %>%
 m_filtered <- m_filtered %>% 
   mutate(servings=ifelse(is.na(servings), 1, servings))
 
+m_filtered <- m_filtered %>% 
+  rename(biome_id=study_id)
+
 ### Save final data output
 write.csv(m_filtered,
-          file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/fully_merged_diet_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv",
           row.names = FALSE)

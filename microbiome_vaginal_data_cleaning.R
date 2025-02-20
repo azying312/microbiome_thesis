@@ -24,11 +24,13 @@ taxa_sample_presence <- colSums((otu.22) > 0) # 0 - taxon absent in sample; 1 - 
 
 ## Filter data
 # Identify non-rare taxa to keep (present in at least 3 samples)
-keep_taxa <- (taxa_sample_presence >= 3)
+keep_taxa <- (taxa_sample_presence >= 2) # 2 samples
+# keep_taxa <- (taxa_sample_presence >= 3)
 bacterial.data.filtered <- prune_taxa(keep_taxa, bacterial.data)
 
 # Save new obj
-saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv2.rds")
+saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_filter2_cleanedv2.rds")
+# saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv2.rds")
 
 total_reads_after <- sum(otu_table(bacterial.data.filtered))
 total_reads_after # 130739221 (291760 reads removed)
@@ -102,4 +104,5 @@ total_reads_filtered-total_reads_Species
 100*(total_reads_filtered-total_reads_Species)/total_reads_filtered
 
 # Save new obj
-saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
+# saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
+saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_filter2_cleanedv3.rds")

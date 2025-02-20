@@ -1,6 +1,6 @@
 library(tidyverse)
 
-diet_data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/alice_fully_merged_diet_data.csv")
+diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
 names(diet_data)
 dim(diet_data)
 

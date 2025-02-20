@@ -4,7 +4,7 @@ rm(list=ls()) # Clearing all saved objects in R workspace
 dass <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 10-DASS-21.csv")
 
 sample.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/Report 8-Sample.csv")
-View(sample.data)
+# View(sample.data)
 # dass$Timestamp
 # posix_date_time <- as.POSIXct(dass$Timestamp, format = "%m-%d-%Y %H:%M:%S")
 # studyID_bitesnap_data$times <- format(posix_date_time, format = "%H:%M:%OS")
