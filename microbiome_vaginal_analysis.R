@@ -37,6 +37,9 @@ rownames(otu_with_participant) <- otu_with_participant$SampleID
 relative_abundance_otu <- relative_abundance_otu %>% 
   select(!SampleID)
 
+
+###################################################################################################
+
 ###### Five Community State Type (CSTs) Clustering
 
 # species to CST mapping
@@ -89,10 +92,18 @@ colnames(sample.cst) <- "CST"
 rownames(sample.cst) <- rownames(bacteria_metadata_df)
 sample.cst$SampleID <- rownames(sample.cst)
 
-###################################################################################################
+
+
+################################################################################
+
+head(bacteria_metadata_df)
+vaginal_relative_abundances <- transform_sample_counts(bacterial.data, function(x) x/sum(x))
+
+################################################################################
 
 bacteria_taxa_table <- tax_table(bacterial.data)
 bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
+
 ########################################################
 
 bacteria_metadata_df <- sample_data(bacterial.data)
@@ -154,6 +165,8 @@ diff.qr <- setdiff(shannon.cst.qr.merged.24$qr, uminn_data_vaginal$qr)
 
 setdiff(unique(shannon.cst.qr.merged.24$biome_id), unique(uminn_data_vaginal$biome_id)) # 68
 setdiff(unique(uminn_data_vaginal$biome_id), unique(shannon.cst.qr.merged.24$biome_id))
+
+write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv")
 
 ################################################################################
 
@@ -347,8 +360,6 @@ ggplot(vaginal.microbial.menses.24.summary, aes(x=menses_day_not_menses, y=mense
 # Lifestyle factors
 merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
 activity_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
-
-
 
 
 

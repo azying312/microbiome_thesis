@@ -130,7 +130,32 @@ savlia_metadata <- bacteria_metadata_df %>%
   filter(sampleType=="saliva")
 ################################################################################
 
-# Subset samples
+# Subset samples - fecal
+bacteria_subset_fecal <- subset_samples(
+  bacteria_physeq,
+  SampleID %in% fecal_metadata$SampleID
+)
+
+bacteria_physeq_otu <- otu_table(bacteria_subset_fecal)
+bacteria_physeq_tax <- tax_table(bacteria_subset_fecal)
+bacteria_physeq_meta <- sample_data(bacteria_subset_fecal)
+
+# Identify contaminants based on prevalence
+contam_prev <- isContaminant(bacteria_subset_fecal, method = "prevalence", neg = "is_blank")
+contaminants <- contam_prev$contaminant
+table(contam_prev$contaminant)
+
+
+# Filter the OTUs in the phyloseq object
+bacteria_physeq_no_contam <- prune_taxa(!contaminants, bacteria_subset_fecal)
+bacteria_physeq_no_contam <- phyloseq(otu_table(bacteria_physeq_no_contam), bacteria_physeq_meta, tax_table(bacteria_physeq_no_contam))
+
+# Save new obj
+saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_decontam.rds")
+
+################################################################################
+
+# Subset samples - vaginal
 bacteria_subset_vaginal <- subset_samples(
   bacteria_physeq,
   SampleID %in% vaginal_metadata$SampleID

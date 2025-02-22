@@ -175,127 +175,99 @@ wilcox.test(avg_shannon ~ is_vegetarian, data = vaginal.microbial.menses.24.summ
 
 ##########################################################################################
 
-# For a participant on a given day, get cals that are vegetarian v. not vegetarian
-# collapse data into foods for that participant by day and the percent of food that is vegetarian
+# PERCENTAGE VEGETARIAN
 
-# vegetarian_percentage <- merged_diet_data %>% 
-#   mutate(study_id=as.numeric(study_id)) %>% 
-#   filter(!is.na(study_id)) %>% 
-#   group_by(study_id, Date) %>% 
-#   summarise(full_day_cal=sum(caloriesall, na.rm = TRUE),
-#             vegetarian_perc=sum(caloriesall[is_vegetarian==TRUE], na.rm=TRUE)) %>% 
-#   ungroup()
-# 
-# View(vegetarian_percentage)
+veg_perc_df <- merged_diet_data %>% 
+  group_by(biome_id, vegetarian) %>% 
+  summarise(total_cal = sum(caloriesall)) %>% 
+  ungroup()
+veg_perc_df <- veg_perc_df %>% 
+  group_by(biome_id) %>% 
+  summarise(perc_veg = 100*sum(total_cal[vegetarian]) / sum(total_cal)) %>%
+  ungroup()
+veg_perc_df <- vaginal.microbial.menses.24 %>% 
+  left_join(veg_perc_df, by="biome_id")
 
-### Save final data output
-# write.csv(merged_diet_data,
-#           file = "/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_diet.csv",
-#           row.names = FALSE)
+# shannon and percent veg
+lm.obj <- lm(shannon ~ perc_veg, data = veg_perc_df)
+summary(lm.obj)
 
-###############
+# average shannon and percent veg
+veg_perc_df_summary  <- veg_perc_df %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon) / n(),
+            perc_veg = first(perc_veg))
+lm.obj.summary <- lm(avg_shannon ~ perc_veg, data = veg_perc_df_summary)
+summary(lm.obj.summary)
 
-## Creating dataset with participant, date, item, and nutritional info
-big <- merged_diet_data
+#### Correlate with birth control
+shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv", header=TRUE)
+participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
 
-### Collapse by Day
-small <- big %>%
-  group_by(study_id, Date) %>%
-  summarise(across(
-    c(caloriesall,cholesterolall,carbohydratesall,sodiumall,
-      proteinall,transFat,caloriesFromSatFat,caloriesFromFat,
-      sugarsall,fatall,addedSugarall,dietaryFiberall), sum
-  ))
+# select birth control
+birthControl.df <- participant.data %>% 
+  select(biome_id, birthControl)
+birthControl.collapsed <- birthControl.df %>% 
+  count(birthControl, name="frequency")
+shannon.birthControl <- shannon.cst.qr.merged.24 %>% 
+  left_join(birthControl.df, by="biome_id") %>% 
+  filter(!is.na(birthControl))
 
+# add the average shannon idx for a participant to df
+shannon.birthControl <- shannon.birthControl %>% 
+  group_by(biome_id) %>% 
+  mutate(avg_shannon=sum(shannon)/n())
 
+# Collapse by person (assign to most frequent CST)
+shannon.birthControl.collapsed <- shannon.birthControl %>%
+  group_by(biome_id) %>% 
+  count(CST, name="frequency") %>% # total 148 (participants have more than 1 CST) 
+  slice_max(frequency, n=1) %>% # collapse to their most frequent CST
+  rename(CST_max=CST) %>% 
+  ungroup() %>%
+  left_join(select(shannon.birthControl, biome_id, birthControl, shannon, avg_shannon, CST), by = "biome_id") %>% 
+  distinct(biome_id, .keep_all = TRUE)
 
-# Week Variable
-small$Timestamp <- as.Date(small$Date, format="%m/%d/%y", tz="UTC")
-time_values <- sort(unique(small$Timestamp))
-num_time_values <- as.numeric(time_values)
+shannon.birthControl.collapsed.diet <- shannon.birthControl.collapsed %>% 
+  left_join(veg_perc_df_summary, by=c("biome_id", "avg_shannon"))
 
-## Figuring out numbers and dates
-as.numeric(as.Date("2022-10-12", format="%Y-%m-%d"))
+# Regress shannon diversity on diet + diet*birth control, if interaction terms (2) is significant
+shannon.birthControl.collapsed.diet <- shannon.birthControl.collapsed.diet %>% 
+  mutate(birthControl_collapsed=ifelse(birthControl=="Systemic Combined (E&P)" | (birthControl=="Systemic P only"), "Systemic",
+                                       birthControl)) %>%
+  mutate(birthControl=as.factor(birthControl),
+         birthControl_collapsed=as.factor(birthControl_collapsed))
 
+shannon.birthControl.collapsed.diet$birthControl <- factor(shannon.birthControl.collapsed.diet$birthControl, levels=c("None", "Local P", "Systemic P only", "Systemic Combined (E&P)"))
+shannon.birthControl.collapsed.diet$birthControl_collapsed <- factor(shannon.birthControl.collapsed.diet$birthControl_collapsed, levels=c("None", "Local P", "Systemic"))
 
-small$week <- rep(NA, nrow(small))
-# Week 1: October 12-October 18
-small$week[small$Timestamp >= 19272 & small$Timestamp <= 19280] <- 1
-small$week[small$Timestamp >= 19281 & small$Timestamp <= 19286] <- 2
-small$week[small$Timestamp >= 19287 & small$Timestamp <= 19293] <- 3
-small$week[small$Timestamp >= 19294 & small$Timestamp <= 19300] <- 4
-small$week[small$Timestamp >= 19301 & small$Timestamp <= 19308] <- 5
-small$week[small$Timestamp >= 19309 & small$Timestamp <= 19315] <- 6
-small$week[small$Timestamp >= 19316 & small$Timestamp <= 19321] <- 7
-small$week[small$Timestamp >= 19322 & small$Timestamp <= 19329] <- 8
-small$week[small$Timestamp >= 19330 & small$Timestamp <= 19336] <- 9
-small$week[small$Timestamp >= 19337] <- 10
+# Regressing models - birth control not collapsed
+diet.birthControl <- lm(avg_shannon ~ perc_veg*birthControl, data=shannon.birthControl.collapsed.diet)
+summary(diet.birthControl)
 
-table(small$week)
-sum(is.na(small$week)) # 10
+diet.birthControl2 <- lm(avg_shannon ~ perc_veg+birthControl, data=shannon.birthControl.collapsed.diet)
+summary(diet.birthControl2)
 
-small_naweek10 <- small %>% 
-  filter(is.na(week))
-dim(small_naweek10)
-#  1   2   3   4   5   6   7   8   9  10 
-# 150 239 216 184 177 120  49 111  89  57 
+anova(diet.birthControl,diet.birthControl2)
 
-# Creating a variable with weeks
-small$week <- rep(NA, nrow(small))
-small$week[small$Date >= "2022-10-08" & small$Date <= "2022-10-14"] <- 1
-small$week[small$Date >= "2022-10-15" & small$Date <= "2022-10-21"] <- 2
-small$week[small$Date >= "2022-10-22" & small$Date <= "2022-10-27"] <- 3
-small$week[small$Date >= "2022-10-28" & small$Date <= "2022-11-03"] <- 4
-small$week[small$Date >= "2022-11-04" & small$Date <= "2022-11-10"] <- 5
-small$week[small$Date >= "2022-11-11" & small$Date <= "2022-11-17"] <- 6
-small$week[small$Date >= "2022-11-18" & small$Date <= "2022-11-24"] <- 7
-small$week[small$Date >= "2022-11-25" & small$Date <= "2022-12-01"] <- 8
-small$week[small$Date >= "2022-12-02" & small$Date <= "2022-12-08"] <- 9
-small$week[small$Date >= "2022-12-09" & small$Date <= "2022-12-15"] <- 10
-small$week[small$Date >= "2022-12-15" & small$Date <= "2022-12-21"] <- 11
+aov.obj <- aov(shannon.birthControl.collapsed.diet$avg_shannon ~ shannon.birthControl.collapsed.diet$birthControl)
+summary(aov.obj)
 
-# 1   2   3   4   5   6   7   8   9  10  11 
-# 109 280 190 184 173 120  76  89  91  73   4 
-# 13 NA
-sum(is.na(small$week)) # 13
-small_naweek <- small %>% 
-  filter(is.na(week))
-small_week11<- small %>% 
-  filter(week==11)
-dim(small_week11)
+# Regressing models - birth control collapsed
+diet.birthControl_collapsed <- lm(avg_shannon ~ perc_veg*birthControl_collapsed, data=shannon.birthControl.collapsed.diet)
+summary(diet.birthControl_collapsed)
 
-#########################
+diet.birthControl_collapsed2 <- lm(avg_shannon ~ perc_veg+birthControl_collapsed, data=shannon.birthControl.collapsed.diet)
+summary(diet.birthControl_collapsed2)
 
-# Collapse by Meal
-small2<-big%>%
-  group_by(study_id, Date,type)%>%
-  summarise(across(c(caloriesall, cholesterolall, carbohydratesall,
-                     sodiumall, proteinall, transFat, caloriesFromSatFat,
-                     caloriesFromFat, sugarsall, fatall, addedSugarall, dietaryFiberall), sum))
+anova(diet.birthControl_collapsed,diet.birthControl_collapsed2)
 
+aov.diet.birthCtrl <- aov(shannon.birthControl.collapsed.diet$avg_shannon ~ shannon.birthControl.collapsed.diet$birthControl_collapsed)
+summary(aov.diet.birthCtrl)
 
-# Contigency table for Study Participant and Meal Type frequency
-table(small2$study_id, small2$type)
+##########################################################################################
 
-#### TO DO: beverage and dessert need to be added to the collapse by meal
+# vaginal microbiota and specific nutrient intake
 
-# Look at beverages
-table(merged_diet_data$type)
-
-beverage_data <- merged_diet_data %>% 
-  filter(type == "beverage")
-dim(beverage_data)
-head(beverage_data)
-
-table(beverage_data$name)
-
-# Look at other
-other_data <- merged_diet_data %>% 
-  filter(type == "other")
-dim(other_data)
-head(other_data)
-
-table(other_data$name)
-# These are drinks? Tequila, 100% Honeycrisp Apple Cider, Apple Cider, Beer, Boba, Brewed Tea, Hot chocolate, latte, Nesquik Chocolate Powder, Pina Colada, Rose wine, sangria, shirley temple, tea, vodka
 
 
