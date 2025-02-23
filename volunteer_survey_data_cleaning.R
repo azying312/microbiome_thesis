@@ -11,8 +11,8 @@ library(lubridate) # date transformation
 source("~/Microbiome Thesis/functions.R")
 
 # Load data
-history_data <- read.csv("/Volumes/T7/microbiome_data/Report 9-Volunteer Medical History.csv")
-id_mapping <- read.csv("/Volumes/T7/microbiome_data/Original Study Mapping - Sheet3.csv", header = TRUE)
+history_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 9-Volunteer Medical History.csv")
+id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 
 # Data Prep
 history_data <- history_data %>% 
@@ -164,10 +164,10 @@ unique_vegetarian_pairs <- diet_data %>%
 
 ## Check if participant vegetarian
 participant_vegetarian_status <- diet_data %>%
-  group_by(study_id) %>%
+  group_by(biome_id) %>%
   # Check if all foods for a participant are vegetarian
   summarise(is_vegetarian = all(vegetarian)) %>% 
-  rename(biome_id=study_id) %>% 
+  # rename(biome_id=study_id) %>% 
   mutate(is_vegetarian=ifelse(is_vegetarian==TRUE, 1, 0))
 participant_vegetarian_status$biome_id <- as.numeric(participant_vegetarian_status$biome_id)
 participant_vegetarian_status <- participant_vegetarian_status %>%

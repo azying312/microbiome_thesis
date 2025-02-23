@@ -202,6 +202,7 @@ summary(lm.obj.summary)
 
 #### Correlate with birth control
 shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv", header=TRUE)
+shannon.cst.qr.merged.24 <- shannon.cst.qr.merged.24[,-1]
 participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
 
 # select birth control
@@ -267,7 +268,67 @@ summary(aov.diet.birthCtrl)
 
 ##########################################################################################
 
+
 # vaginal microbiota and specific nutrient intake
 
+nutrient.diet.22 <- merged_diet_data %>% 
+  group_by(biome_id) %>% 
+  summarise(cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            satFat_prop = sum(saturatedFatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sodium_prop = sum(sodiumall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            carb_prop = sum(carbohydratesall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            dietFib_prop = sum(dietaryFiberall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sugar_prop = sum(sugarsall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            protein_prop = sum(proteinall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_prop = sum(fatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_cal_prop = sum(caloriesFromFat, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE)) %>% 
+  ungroup()
+
+shannon.cst.qr.merged.24.collapsed <- shannon.cst.qr.merged.24 %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon)/n(),
+            max_CST = names(sort(table(CST), decreasing = TRUE))[1])
+
+nutrient.diet.22.microbiome <- shannon.cst.qr.merged.24.collapsed %>% 
+  left_join(nutrient.diet.22, by = "biome_id")
+
+# regress the nutrients on avg_shannon
+lm.nutrients <- lm(avg_shannon ~ ., data = nutrient.diet.22.microbiome[,-c(1,3)])
+summary(lm.nutrients)
+
+# visualize significant nutrients
+ggplot(nutrient.diet.22.microbiome, aes(x = cholesterol_prop, y = avg_shannon)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue", se=FALSE) +
+  labs(title = "", x = "Cholesterol Intake (Proportion of Total Calories)", y = "Average Shannon Diversity") +
+  theme_minimal()
+
+ggplot(nutrient.diet.22.microbiome, aes(x = protein_prop, y = avg_shannon)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue", se=FALSE) +
+  labs(title = "", x = "Protein Intake (Proportion of Total Calories)", y = "Average Shannon Diversity") +
+  theme_minimal()
+
+# regress the nutrients on CST
+library(nnet)
+
+multinom.nutrients.CST <- multinom(max_CST ~ ., data = nutrient.diet.22.microbiome[,-c(1,2)])
+summary(multinom.nutrients.CST)
+
+library(car)
+# Wald test on coefficients
+Anova(multinom.nutrients.CST, type = "II")
+
+pred_probs <- predict(multinom.nutrients.CST, nutrient.diet.22.microbiome, type = "probs")
+nutrient.diet.22.microbiome_pred_probs <- cbind(nutrient.diet.22.microbiome, pred_probs)
+
+# visualize significant nutrients
+ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = dietFib_prop)) +
+  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+  labs(title = "", x = "Dietary Fiber Intake", y = "Predicted Probability")
 
 

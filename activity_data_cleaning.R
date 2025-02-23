@@ -27,6 +27,8 @@ activity.data$steps <- as.numeric(gsub(",", "", activity.data$steps))
 activity.data$minutes_sedentary <- as.numeric(gsub(",", "", activity.data$minutes_sedentary))
 activity.data$activity_calories <- as.numeric(gsub(",", "", activity.data$activity_calories))
 
+activity.data$minutes_lightly_active <- as.numeric(activity.data$minutes_lightly_active)
+
 ### Save final data output
 write.csv(activity.data,
           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv",
@@ -62,7 +64,7 @@ studyID_activity_data <- studyID_activity_data[order(studyID_activity_data$activ
 id_values <- unique(studyID_activity_data$biome_id)
 
 dim(studyID_activity_data)
-View(studyID_activity_data)
+# View(studyID_activity_data)
 
 ### Data Analysis
 # Plot calories burned
