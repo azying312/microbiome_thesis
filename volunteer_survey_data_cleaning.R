@@ -203,6 +203,7 @@ history_data_subset$sport[grepl("tennis", history_data_subset$sport, ignore.case
                             grepl("rowing", history_data_subset$sport, ignore.case = TRUE) | 
                             grepl("basketball", history_data_subset$sport, ignore.case = TRUE) |
                             grepl("lacrosse", history_data_subset$sport, ignore.case = TRUE) |
+                            # check if track was in season?
                             grepl("track", history_data_subset$sport, ignore.case = TRUE)] <- "Off-Season"
 history_data_subset$sport[grepl("no", history_data_subset$sport, ignore.case = TRUE) |
                             grepl("pe class", history_data_subset$sport, ignore.case = TRUE)] <- "None"

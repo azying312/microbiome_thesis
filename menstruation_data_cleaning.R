@@ -1,7 +1,7 @@
 ########################
 #
 # Clean Menstruation Data
-# 8 October 2024
+# 26 Feb 2025
 #
 # Dataset Outputs: cleaned_menstruation_data.csv & cleaned_vaginal_samples_data.csv
 #
@@ -26,7 +26,8 @@ menses_data <- menses_data %>%
 menses_data <- study_mapping(menses_data, id_mapping)
 
 # DATA CLEANING
-menses_data_cleaned <- menses_data %>% 
+menses_data_cleaned <- menses_data %>% # app
+  # not entry on menstruation or not
   filter(menstruation!="") %>% 
   mutate(menstruation_numeric = case_when(
     menstruation == "none" ~ -1,
@@ -37,8 +38,10 @@ menses_data_cleaned <- menses_data %>%
     TRUE ~ NA_real_
   )) %>%
   mutate(menstruation_text=menstruation) %>% 
+  # if they menstruate on that day
   mutate(menstruation=ifelse(menstruation_numeric>0, 1, menstruation_numeric)) %>%
   mutate(biome_id=as.numeric(biome_id)) %>% 
+  # mark that this is from self report
   mutate(inSelfReport=TRUE) %>% 
   select(biome_id, logDate, menstruation, products, menstruation_numeric, menstruation_text, inSelfReport)
 head(menses_data_cleaned)
@@ -56,19 +59,17 @@ uminn_data_subset$inUminn <- TRUE
 vaginal_samples <- samples_data %>% 
   filter(sampleType=="vaginal")
 
-# uminn_data_subset <- uminn_data_subset %>% 
-#   left_join(samples_data, by="qr") %>% 
-#   filter(!is.na(sampleType))
-
-# keep all the vaginal samples, mark uminn menstruation by if there is blood
+# keep all the vaginal samples, merge with uminn data
 uminn_data_subset <- uminn_data_subset %>% 
   left_join(vaginal_samples, by="qr") %>% 
   filter(!is.na(sampleType))
+dim(uminn_data_subset) # 1600   10
 
 # clean UMinn samples
 uminn_data_subset <- uminn_data_subset %>% 
   # no corresponding logDate
   filter(logDate!="0000-00-00") %>%
+  # mark uminn menstruation by if there is blood
   mutate(uMinn_menstruation=ifelse(str_detect(Special.Notes, "Blood")==TRUE, 1, 0)) %>%  # set to menstruation true
   select(biome_id, logDate, uMinn_menstruation, inUminn, Special.Notes) %>% 
   mutate(biome_id=as.numeric(biome_id))
@@ -102,10 +103,7 @@ full_menstruation_data <- full_menstruation_data %>%
 # check incongruity: if any days with self report no menses & sample with blood 
 incong_menses <- full_menstruation_data %>% 
   filter(uMinn_menstruation==TRUE & menstruation==-1)
-incong_menses
-
-# na_menses <- full_menstruation_data %>% 
-  # filter(full_menstruation_data$inSelfReport==TRUE & is.na(full_menstruation_data$menstruation))
+dim(incong_menses)
 
 full_menstruation_data <- full_menstruation_data %>%
   mutate(menstruation_status=case_when(

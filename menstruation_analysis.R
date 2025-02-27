@@ -3,7 +3,7 @@
 # Menstruation Data Analysis
 # 9 November 2024
 #
-#########################
+######################### 
 
 library(tidyverse)
 
@@ -12,20 +12,22 @@ survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_R
 
 survey_data <- survey_data_full %>% 
   select(biome_id, survey_menstruate) #%>%
-  # rename(survey_menstruate=menstruate) # 14 no, 54 yes
+  # rename(survey_menstruate=menstruate) # 14 no, 53 yes
+table(survey_data$survey_menstruate)
 
 ## Q: What proportion of self-reported days had blood; days that are inUminn & in self report
 selfReport_blood <- full_data %>% 
   filter(inSelfReport==TRUE & uMinn_menstruation==1)
-dim(selfReport_blood) # 42 days
-sum(full_data$inSelfReport==TRUE)
+dim(selfReport_blood) # 39 days
+# self reported data
+sum(full_data$inSelfReport==TRUE) # 128
+# self reported data that are menses
 sum((full_data$inSelfReport==TRUE & full_data$menstruation==1), na.rm=TRUE) # 108
 
 ## Q: What proportion of self reported have corresponding samples? - includes no menses ppl too
-selfReport_blood <- full_data %>% 
+selfReport_samples <- full_data %>% 
   filter(inUminn==TRUE & inSelfReport==TRUE)
-dim(selfReport_blood)
-sum((full_data$inSelfReport==TRUE), na.rm=TRUE) # 128
+dim(selfReport_samples) # 71  8
 
 ### Agreement we have btw UMinn data & Self Reported (put in a slide)
 ## Q: Do samples for the same day agree on blood/no-blood?
@@ -42,12 +44,12 @@ dim(full_data %>% filter(inSelfReport==TRUE & uMinn_menstruation==1 & inUminn==T
 ## Q: For days we have self report & samples, do they correspond
 selfReport_samples <- full_data %>%
   filter(inSelfReport==TRUE & inUminn==TRUE) 
-dim(selfReport_samples) # 72 with both self report & samples
+dim(selfReport_samples) # 71 with both self report & samples
 table(selfReport_samples$menstruation_status)
 table(selfReport_samples$uMinn_menstruation, selfReport_samples$menstruation)
 
 dim(full_data %>% filter(inSelfReport==TRUE)) # 128 in self report
-dim(full_data %>% filter(inUminn==TRUE)) # 1422 in UMinn
+dim(full_data %>% filter(inUminn==TRUE)) # 1423 in UMinn
 
 ## Q: Days in UMinn with Blood
 dim(full_data %>% filter(inUminn==TRUE & uMinn_menstruation==TRUE))
@@ -58,6 +60,7 @@ full_data <- full_data %>%
   mutate(person_menstruating=ifelse((menstruation_status==1 | menstruation_status==2 | menstruation_status==3 
                                      | menstruation_status==7), 1, 
                                     ifelse(menstruation_status==8, -1, 0)))
+table(full_data$person_menstruating)
 
 #### Contingency Tables -- smthg going wrong here
 
@@ -76,26 +79,28 @@ dim(mismatched_entries)
 length(unique(mismatched_entries$biome_id))
 
 mismatch_menstruate_df <- menstruate_df %>%
-  mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0)) %>% 
+  # mutate(survey_menstruate=ifelse(survey_menstruate=="Yes", 1, 0)) %>% 
   filter(((menstruation==1 | uMinn_menstruation==1) & survey_menstruate == 0))
+length(unique(mismatch_menstruate_df$biome_id)) # 6 ppl
 
 # All ppl who say they don't menstruate
 person_says_no_menses <- full_data %>% 
   left_join(survey_data, by="biome_id") %>% 
   filter(survey_menstruate==0)
+length(unique(person_says_no_menses$biome_id)) # 13
 
 # Check people who said they do menstruate with no entries (missingness)
 missing_entries <- survey_data %>%
   filter(survey_menstruate == 1 & menses_data_entry == 0)
-dim(missing_entries) # 3
+dim(missing_entries) # 8
 length(unique(missing_entries$biome_id))
 
 # Number of people who don't menstruate (say they don't & no menstruation reports for them)
 no_menses <- survey_data %>%
   filter(survey_menstruate == 0 & menses_data_entry == 0)
 dim(no_menses)
-unique(no_menses$biome_id)
-length(unique(no_menses$biome_id))
+unique(no_menses$biome_id) 
+length(unique(no_menses$biome_id)) # 8
 
 # Do menstruate with menses entries
 yes_menses <- survey_data %>%
@@ -121,7 +126,7 @@ filtered_data <- full_data %>%
 menstruate_df <- filtered_data %>% 
   group_by(biome_id) %>% 
   summarise(count = sum(person_menstruating == 1, na.rm = TRUE))
-menstruate_df[menstruate_df$count==0,]$biome_id
+length(unique((menstruate_df[menstruate_df$count==0,]$biome_id)))
 
 ##################### Heatmap Construction - Blue & White
 
@@ -158,6 +163,8 @@ ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating
 
 # Plot 2: Mismatch participants
 mismatch_ids <- unique(mismatch_menstruate_df$biome_id)
+length(unique(mismatch_menstruate_df$biome_id))
+
 mismatch_menstruate_df <- full_data %>%
   filter(biome_id %in% mismatch_ids) %>% 
   filter(as.Date(logDate) < as.Date("2022-12-15")) %>% 
