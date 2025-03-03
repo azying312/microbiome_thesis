@@ -4,6 +4,7 @@ library(phyloseq)
 # library(pheatmap)
 library(tidyverse)
 library(Matrix)
+library(decontam)
 
 # after vaginal_gut_sample_check.R
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_cleanedv2.rds")
@@ -11,8 +12,9 @@ samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_sampl
 
 # FIRST RUN (NO RELABELING)
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+# samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
+# OLD DATA RUNS
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
 
@@ -46,10 +48,10 @@ contaminants <- contam_prev$contaminant
 table(contam_prev$contaminant)
 
 ## Saliva
-bacteria_subset_saliva <- subset_samples(
-  bacteria_physeq,
-  SampleID %in% savlia_metadata$SampleID
-)
+# bacteria_subset_saliva <- subset_samples(
+#   bacteria_physeq,
+#   SampleID %in% savlia_metadata$SampleID
+# )
 
 # Filter the OTUs in the phyloseq object
 bacteria_physeq_no_contam <- prune_taxa(!contaminants, bacteria_subset_vaginal)
@@ -76,6 +78,9 @@ saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_dat
 
 ################################################################################
 
+# SKIPPED DATA FILTERING
+bacterial.data.filtered <- bacteria_physeq_clean
+
 # Data filtering
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleaned.rds")
 
@@ -90,10 +95,10 @@ dim(otu.22)
 total_reads_initial <- sum(otu.22) # 131030981
 
 # number of reads per taxa
-taxa_total_reads <- taxa_sums(bacterial.data)
+taxa_total_reads <- taxa_sums(bacteria_physeq_clean)
 taxa_sample_presence <- colSums((otu.22) > 0) # 0 - taxon absent in sample; 1 - taxon in sample -- then sum
 
-## Filter data
+# ## Filter data
 # Identify non-rare taxa to keep (present in at least 3 samples)
 keep_taxa <- (taxa_sample_presence >= 2) # 2 samples
 # keep_taxa <- (taxa_sample_presence >= 3)
@@ -175,5 +180,9 @@ total_reads_filtered-total_reads_Species
 100*(total_reads_filtered-total_reads_Species)/total_reads_filtered
 
 # Save new obj
+# BEFORE RE-LABELED DATA
 saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
 # saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_filter2_cleanedv3.rds")
+
+# NEW LABELED DATA
+saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_bacteria_cleanedv3.rds")

@@ -3,6 +3,11 @@ library(decontam)
 library(tidyverse)
 library(Matrix)
 
+# after vaginal_gut_sample_check.R
+bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_cleanedv2.rds")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+
+# FIRST RUN (NO RELABELING)
 bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
@@ -58,6 +63,9 @@ bacteria_physeq_clean <- phyloseq(otu_table(bacteria_physeq_subset), bacteria_ph
 saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
 
 ################################################################################
+
+# SKIP FILTERING
+bacterial.data.filtered <- bacteria_physeq_clean
 
 # Filtering
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
@@ -133,4 +141,8 @@ total_reads_filtered-total_reads_Species # 50122517 removed
 100*(total_reads_filtered-total_reads_Species)/total_reads_filtered # 36.262% removed
 
 # Save new obj
+# BEFORE RE-LABEL DATA
 saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
+
+# NEW LABELED DATA
+saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")
