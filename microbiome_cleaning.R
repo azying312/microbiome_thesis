@@ -16,7 +16,7 @@ uminn_data <- uminn_data %>%
   mutate(qr=sub("_.*", "", Sample.ID))
 
 metadata_bacteria <- data.frame(
-  SampleID = colnames(bacterial_otu_table),
+  SampleID = sample_names(bacterial_otu_table),
   is_blank = grepl("BLANK", colnames(bacterial_otu_table)),
   stringsAsFactors = FALSE) %>%
   mutate(qr = sub("\\_.*", "", SampleID))
@@ -24,6 +24,13 @@ metadata_bacteria <- data.frame(
 metadata_bacteria <- metadata_bacteria %>% 
   left_join(samples.data, by="qr")
 rownames(metadata_bacteria) <- metadata_bacteria$SampleID
+
+dupes <- names(table(metadata_bacteria$SampleID))[table(metadata_bacteria$SampleID) > 1]
+# [1] "S1519_2_V3V5_S1487"       "S1519_V3V5_S1199"         "S1587_2_V3V5_S1535"      
+# [4] "S1587_V3V5_S1247"         "S2558_2_V3V5_S1499"       "S2558_V3V5_S1211"        
+# [7] "S3244_2_V3V5_S1475"       "S3244_V3V5_S1187"         "S3791_2_V3V5_S1511"      
+# [10] "S3791_V3V5_S1223"         "S3977_2_V3V5_S1523"       "S3977_V3V5_S1235"        
+# [13] "S4495_loose_2_V3V5_S1547" "S4495_loose_V3V5_S1259" 
 
 # Set sample data
 sample_data_obj <- sample_data(metadata_bacteria)

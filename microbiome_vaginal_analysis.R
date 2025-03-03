@@ -357,9 +357,47 @@ ggplot(vaginal.microbial.menses.24.summary, aes(x=menses_day_not_menses, y=mense
        title="Average Shannon Diversity for Participants")
 
 ##########################################################################################
-# Lifestyle factors
-merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
-activity_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
+# XXX
 
 
+# # Boxplot of diversity by log date
+# par(mfrow=c(1,1))
+# boxplot(shannon.qr.merged$shannon~shannon.qr.merged$logDate, col="lightblue", ylab="Shannon", xlab="Log Date")
+# 
+# # Boxplot of species number by year, for 4 repeats
+# par(mfrow=c(2,2))
+# for (i in 1:length(repeats)) {
+#   boxplot(specnum.qr.merged.17$spec.num[specnum.qr.merged$uid==repeats[i]],
+#           specnum.qr.merged.18$spec.num[specnum.qr.merged$uid==repeats[i]],
+#           names=c("2017", "2018"), ylab="species number", main=paste("Subj", i, sep=" "))
+# }
+# 
+# # Boxplot of diversity by user ID
+# unique.uid <- sort(unique(shannon.qr.merged$uid))
+# num.uid <- length(unique.uid) # number of user IDs
+# heatcols <- colorRamp(c("yellow", "red3"))
+# tempcolors <- rgb(heatcols(table(shannon.qr.merged$uid)/max(table(shannon.qr.merged$uid)))/255)
+# 
+# par(mfrow=c(1,1), mai=c(1, 1, .5, .5))
+# boxplot(shannon.qr.merged$shannon~shannon.qr.merged$uid, las=1, border=tempcolors, axes=FALSE, 
+#         xlab="Subject", ylab="Shannon")
+# axis(1, at=1:num.uid, labels=1:num.uid)
+# axis(2, at=0:4)
+# text(x=1:num.uid, y=rep(4.3, num.uid),
+#      labels=table(shannon.qr.merged$uid),
+#      xpd=TRUE, col=tempcolors)
+# 
+# # Diversity over time for each user
+# par(mfrow=c(3,3), mai=c(.6,.6,.3,.3))
+# i <- 1
+# for (i.uid in unique.uid){
+#   current.div <- shannon.qr.merged$shannon[shannon.qr.merged$uid==i.uid]
+#   current.dates <- shannon.qr.merged$logDate[shannon.qr.merged$uid==i.uid]
+#   date.cols <- rep("blue", length(current.dates))
+#   date.cols[current.dates > "2017-04-30"] <- "red"
+#   plot(current.div~current.dates, xlim=c(min(current.dates, na.rm=TRUE), max(current.dates, na.rm=TRUE)), ylim=c(0, 4), 
+#        xlab="Date", ylab="Shannon", main=i, las=1, col=date.cols)
+#   i <- i + 1
+# }
+# 
 

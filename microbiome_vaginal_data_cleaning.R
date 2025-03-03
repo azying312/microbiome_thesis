@@ -5,11 +5,16 @@ library(phyloseq)
 library(tidyverse)
 library(Matrix)
 
-bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
+# after vaginal_gut_sample_check.R
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_cleanedv2.rds")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+
+# FIRST RUN (NO RELABELING)
+# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/old_data/vaginal_bacteria_intermediary.rds")
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/bacteria_intermediary.rds")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 bacteria_physeq_otu <- otu_table(bacteria_physeq)
 bacteria_physeq_tax <- tax_table(bacteria_physeq)
