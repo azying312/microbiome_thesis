@@ -18,7 +18,9 @@ menses_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Report 1-Mens
 id_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/Original Study Mapping - Sheet3.csv", header = TRUE)
 survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
-samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
+# samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
+# re labeled
+samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv", header=TRUE)
 
 # Data Prep
 menses_data <- menses_data %>%
@@ -63,7 +65,7 @@ vaginal_samples <- samples_data %>%
 uminn_data_subset <- uminn_data_subset %>% 
   left_join(vaginal_samples, by="qr") %>% 
   filter(!is.na(sampleType))
-dim(uminn_data_subset) # 1600   10
+dim(uminn_data_subset) # 1600   10 | 1562 10
 
 # clean UMinn samples
 uminn_data_subset <- uminn_data_subset %>% 
@@ -138,8 +140,12 @@ sum(is.na(full_menstruation_data$menstruation_status))
 
 ### Save final data output
 write.csv(full_menstruation_data,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv",
           row.names = FALSE)
+
+# write.csv(full_menstruation_data,
+#           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv",
+#           row.names = FALSE)
 
 # Vaginal samples from uminn (menses and non menses)
 uminn_data_vaginal <- uminn_data %>% 
@@ -160,8 +166,11 @@ uminn_data_vaginal <- uminn_data_vaginal %>%
   filter(!is.na(biome_id)) %>% # filter NA ids
   filter(!str_detect(Special.Notes, "error")) # filter out errors
 
+# write.csv(uminn_data_vaginal,
+#           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_vaginal_samples_data.csv",
+#           row.names = FALSE)
 write.csv(uminn_data_vaginal,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_vaginal_samples_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_vaginal_samples_data.csv",
           row.names = FALSE)
 
 
@@ -183,7 +192,7 @@ dim(complete_grid)
 heatmap_data <- complete_grid %>%
   left_join(menses_data_cleaned_subset, by = c("biome_id", "logDate")) 
 
-ggplot(heatmap_data, aes(x = logDate, y = factor(biome_id), fill = menstruation_numeric)) +
+ggplot(heatmap_data, aes(x = logDate, y = factor(biome_id), fill = as.numeric(menstruation_numeric))) +
   geom_tile(color = "gray25") +
   scale_fill_gradientn(colors = c("lightblue", "blue", "black"), 
                        values = scales::rescale(c(0, 1, 2, 3)), 

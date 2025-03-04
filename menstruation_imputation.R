@@ -4,7 +4,10 @@ library(zoo)
 
 source("~/Microbiome Thesis/functions.R")
 
-full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
+# RELABELED DATA
+full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+
+# full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
 survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
 # filter data
@@ -150,11 +153,19 @@ regular_cycle_df <- imputation_data %>%
 
 irregular_cycle_df <- imputation_data %>% 
   filter(regular_periods!=1)
+
+noinfo_cycle_df <- imputation_data %>% 
+  filter(is.na(regular_periods))
+
 dim(regular_cycle_df)
+dim(irregular_cycle_df)
+dim(noinfo_cycle_df)
 
 heatmap_plot2(regular_cycle_df)
 
 heatmap_plot2(irregular_cycle_df)
+
+heatmap_plot2(noinfo_cycle_df)
 
 ####################################################################
 # Imputation pt. 4: add fecal samples
@@ -177,9 +188,14 @@ regular_cycle_df <- imputation_data_fecal %>%
 irregular_cycle_df <- imputation_data_fecal %>% 
   filter(regular_periods!=1)
 
+ininfo_cycle_df <- imputation_data_fecal %>% 
+  filter(is.na(regular_periods))
+
 heatmap_plot_fecal(regular_cycle_df)
 
 heatmap_plot_fecal(irregular_cycle_df)
+
+heatmap_plot_fecal(ininfo_cycle_df)
 
 ####################################################################
 # Imputation pt. 5: Add imputed dates (fecal samples not represented here)
@@ -194,11 +210,12 @@ person65_days <- c("2022-10-15", "2022-10-16", "2022-10-18", "2022-10-19", "2022
 person64_days <- c("2022-10-21", "2022-10-23", "2022-11-17", "2022-11-18")
 person60_days <- c("2022-10-20", "2022-10-21", "2022-10-22", "2022-10-23", "2022-11-15", "2022-11-16", "2022-11-17")
 person63_days <- c("2022-10-25")
-person43_days <- c("2022-12-01", "2022-12-02")
+person66_days <- c("2022-10-21", "2022-10-22", "2022-10-23")
+person43_days <- c("2022-12-01", "2022-12-02", "2022-12-04", "2022-12-05", "2022-12-06")
 person38_days <- c("2022-11-02", "2022-11-03", "2022-11-05", "2022-11-06")
 person12_days <- c("2022-10-22")
 person35_days <- c("2022-11-16", "2022-11-18")
-person25_days <- c("2022-11-03")
+person25_days <- c("2022-11-01", "2022-11-03")
 person41_days <- c("2022-10-28", "2022-11-24", "2022-11-25", "2022-11-26", "2022-11-27", "2022-11-28") # actually imputed, not just fill in cycles
 person39_days <- c("2022-11-05")
 person23_days <- c("2022-10-21", "2022-10-22", "2022-10-23", "2022-10-24", "2022-10-25", "2022-10-26") # actually imputed, not just fill in cycles
@@ -208,7 +225,7 @@ person26_days <- c("2022-10-24") # impute since next to a self-report day
 
 # Irregular (self-reported); person 33, 2, 54, 59, 47, 11, 56, 44, 42, 3, 40, 36, 13 can't really impute
 # person 53, 10 no impute needed
-person48_days <- c("2022-10-25", "2022-10-27", "2022-10-28", "2022-11-28", "2022-12-01")
+person48_days <- c("2022-10-25", "2022-10-27", "2022-10-28", "2022-11-28", "2022-12-01", "2022-11-29", "2022-12-02", "2022-12-03", "2022-12-04", "2022-12-06", "2022-12-02")
 person1_days <- c("2022-10-24", "2022-10-25", "2022-10-28")
 person7_days <- c("2022-10-31")
 person61_days <- c("2022-10-31")
@@ -220,6 +237,8 @@ imputation_data_v2 <- imputation_data %>%
                 ~ ifelse(biome_id==65, 78, .) )) %>% 
   mutate(across(all_of(person64_days),
                 ~ ifelse(biome_id==64, 78, .) )) %>% 
+  mutate(across(all_of(person66_days),
+                ~ ifelse(biome_id==66, 78, .) )) %>% 
   mutate(across(all_of(person60_days),
                 ~ ifelse(biome_id==60, 78, .) )) %>% 
   mutate(across(all_of(person63_days),
@@ -263,6 +282,11 @@ imputation_data_v2 <- imputation_data %>%
 heatmap_plot_imputation(imputation_data_v2)
 
 ### Save final data output
+# write.csv(imputation_data_v2,
+#           file = "/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv",
+#           row.names = FALSE)
+
+# Relabeled data
 write.csv(imputation_data_v2,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv",
           row.names = FALSE)

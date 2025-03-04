@@ -12,7 +12,9 @@ library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
+# RELABELED DATA
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_bacteria_cleanedv3.rds")
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
 # BLAST of max taxa
 BLAST_taxa <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/max taxa BLAST.csv")
 
@@ -44,7 +46,10 @@ species_to_cst <- data.frame(
 )
 
 # Get most abundant OTU per sample
-max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
+# BEFORE RELABELED
+# max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
+# RELABELED
+max_taxa <- apply(relative_abundance_otu_t, 1, function(sample) {
   taxa_idx <- which.max(sample)
   taxa_names(vaginal_relative_abundances)[taxa_idx]
 })
@@ -58,7 +63,8 @@ bacteria_taxa_table <- tax_table(bacterial.data)
 bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
 
 ################## FASTA
-fasta.file <- "/Volumes/T7/microbiome_data/sequenced_data/otu_seq.fasta"
+# fasta.file <- "/Volumes/T7/microbiome_data/sequenced_data/otu_seq.fasta"
+fasta.file <- "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/otu_seq.fasta"
 # Get unique max taxa to BLAST
 blast_taxa <- unique(bacteria_metadata_df$max_taxa)
 blast_sequences <- bacteria_taxa_df[blast_taxa, "sequence", drop=FALSE]
@@ -84,7 +90,9 @@ tax_table(bacterial.data) <- as.matrix(tax.22)
 vaginal_max_taxa <- phyloseq(otu_table(bacterial.data), sample_data(bacterial.data), tax_table(bacterial.data))
 
 # Save new obj
-saveRDS(vaginal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
+# saveRDS(vaginal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
 
+# RELABELED VERSION
+saveRDS(vaginal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_cleaned_max_taxa.rds")
 
 

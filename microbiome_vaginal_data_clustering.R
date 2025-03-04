@@ -11,7 +11,10 @@ library(gridExtra)
 
 # Data created in microbiome_vaginal_data_cleaning.R
 # bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
+# RELABELED DATA
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_cleaned_max_taxa.rds")
+
 otu.22 <- otu_table(bacterial.data)
 tt.22 <- tax_table(bacterial.data)
 tt.df <- as.data.frame(tt.22)
@@ -60,8 +63,8 @@ clust <- as.factor(pam(x, k=K, cluster.only=T))
 # clust[clust==3] <- NA
 # clust[clust==4] <- 3
 # clust[is.na(clust)] <- 4
-# sample_data(ps)$CST <- clust
-# CSTs <- as.character(seq(K))
+sample_data(ps)$CST <- clust
+CSTs <- as.character(seq(K))
 
 # Evaluate Clustering
 CSTColors <- brewer.pal(6,"Paired")[c(1,3,2,5,4,6)] # Length 6 for consistency with pre-revision CST+ coloration
@@ -85,7 +88,7 @@ for(CST in CSTs) {
 }
 
 ####
-# Save R Environment
+# Save R Environment - on not relabeled data (did not resave after relabeling)
 # save.image("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_CST_clustering.RData")
 # load("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_CST_clustering.RData")
 

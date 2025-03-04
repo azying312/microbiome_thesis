@@ -7,7 +7,9 @@
 
 library(tidyverse)
 
-full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
+# RELABELED DATA
+full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+# full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
 survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
 survey_data <- survey_data_full %>% 
@@ -18,16 +20,16 @@ table(survey_data$survey_menstruate)
 ## Q: What proportion of self-reported days had blood; days that are inUminn & in self report
 selfReport_blood <- full_data %>% 
   filter(inSelfReport==TRUE & uMinn_menstruation==1)
-dim(selfReport_blood) # 39 days
+dim(selfReport_blood) # 39 days | 40
 # self reported data
-sum(full_data$inSelfReport==TRUE) # 128
+sum(full_data$inSelfReport==TRUE) # 129
 # self reported data that are menses
-sum((full_data$inSelfReport==TRUE & full_data$menstruation==1), na.rm=TRUE) # 108
+sum((full_data$inSelfReport==TRUE & full_data$menstruation==1), na.rm=TRUE) # 108 | 109
 
 ## Q: What proportion of self reported have corresponding samples? - includes no menses ppl too
 selfReport_samples <- full_data %>% 
   filter(inUminn==TRUE & inSelfReport==TRUE)
-dim(selfReport_samples) # 71  8
+dim(selfReport_samples) # 71  8 | 72 8
 
 ### Agreement we have btw UMinn data & Self Reported (put in a slide)
 ## Q: Do samples for the same day agree on blood/no-blood?
@@ -44,7 +46,7 @@ dim(full_data %>% filter(inSelfReport==TRUE & uMinn_menstruation==1 & inUminn==T
 ## Q: For days we have self report & samples, do they correspond
 selfReport_samples <- full_data %>%
   filter(inSelfReport==TRUE & inUminn==TRUE) 
-dim(selfReport_samples) # 71 with both self report & samples
+dim(selfReport_samples) # 71 with both self report & samples | 72 8
 table(selfReport_samples$menstruation_status)
 table(selfReport_samples$uMinn_menstruation, selfReport_samples$menstruation)
 

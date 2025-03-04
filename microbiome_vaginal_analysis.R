@@ -12,8 +12,8 @@ library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
-
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_cleaned_max_taxa.rds")
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
 
 ###############################################################################################
 
@@ -49,7 +49,8 @@ species_to_cst <- data.frame(
 )
 
 # Get most abundant OTU per sample
-max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
+# max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) { 
+  max_taxa <- apply(relative_abundance_otu_t, 1, function(sample) { # on relabeled data
   taxa_idx <- which.max(sample)
   taxa_names(vaginal_relative_abundances)[taxa_idx]
 })
@@ -140,7 +141,8 @@ library(viridis)
 
 ### Check UMinn Spreadsheet v. Sequenced Data
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+# samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes) %>% 
