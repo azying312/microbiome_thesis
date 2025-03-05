@@ -112,14 +112,20 @@ bacteria_metadata_df <- sample_data(bacterial.data)
 otu_table_df <- as(otu_table(bacterial.data), "matrix")
 
 # Aggregate data by participants by mean relative abundance for a given OTU
+# participant_otu <- tapply(sample_names(bacteria_metadata_df),
+#                           sample_data(bacterial.data)$biome_id,
+#                           function(samples) rowMeans(t(otu_table(vaginal_relative_abundances))[, samples, drop = FALSE]))
+
 participant_otu <- tapply(sample_names(bacteria_metadata_df),
                           sample_data(bacterial.data)$biome_id,
-                          function(samples) rowMeans(t(otu_table(vaginal_relative_abundances))[, samples, drop = FALSE]))
+                          function(samples) rowMeans(otu_table(vaginal_relative_abundances)[, samples, drop = FALSE]))
+
+# 2015 1571
 participant_otu <- do.call(cbind, participant_otu)
 rownames(participant_otu) <- taxa_names(vaginal_relative_abundances)
 
 ## Alpha Div - Shannon Index
-shannon.24 <- vegan::diversity(otu_table_df, "shannon")
+shannon.24 <- vegan::diversity(t(otu_table_df), "shannon")
 
 # Add participant IDs from sample data | Merge the calculated Shannon diversity values with metadata
 bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
@@ -129,15 +135,14 @@ shannon.cst.qr.merged.24 <- merge(sample.cst, shannon.qr.merged.24, by="SampleID
   mutate(biome_id=as.integer(biome_id)) %>% 
   filter(!is.na(biome_id)) %>% 
   # Filter the data to be within study days: 10-14 to 12-14
-  filter(logDate > "2022-10-13" & logDate < "2022-12-15") # 2038 to 1971
+  filter(logDate > "2022-10-12" & logDate < "2022-12-16") # 2038 to 1971 --> 1571 in relabeled
 
-# Save R environment
+# Save R environment - did not resave after relabeling data
 # save.image("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
 
 ###########################################################################
 library(tidyverse)
 library(viridis)
-# load("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
 
 ### Check UMinn Spreadsheet v. Sequenced Data
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv")
@@ -160,15 +165,16 @@ uminn_data_vaginal <- uminn_data %>%
 uminn_data_vaginal <- uminn_data_vaginal %>% 
   left_join(vaginal_data, by="qr")
 
-length(setdiff(shannon.cst.qr.merged.24$qr, uminn_data_vaginal$qr)) # 0 -- 386; turned into 522?
-length(setdiff(uminn_data_vaginal$qr, shannon.cst.qr.merged.24$qr)) # 57 -- 19; turned into 18 - less concerned
+length(setdiff(shannon.cst.qr.merged.24$qr, uminn_data_vaginal$qr)) # 0 -- 386; turned into 522? -> relabeled: 5
+length(setdiff(uminn_data_vaginal$qr, shannon.cst.qr.merged.24$qr)) # 57 -- 19; turned into 18 - less concerned -> relabeled: 57
 
 diff.qr <- setdiff(shannon.cst.qr.merged.24$qr, uminn_data_vaginal$qr)
 
-setdiff(unique(shannon.cst.qr.merged.24$biome_id), unique(uminn_data_vaginal$biome_id)) # 68
-setdiff(unique(uminn_data_vaginal$biome_id), unique(shannon.cst.qr.merged.24$biome_id))
+setdiff(unique(shannon.cst.qr.merged.24$biome_id), unique(uminn_data_vaginal$biome_id)) # 68 ---> none
+setdiff(unique(uminn_data_vaginal$biome_id), unique(shannon.cst.qr.merged.24$biome_id)) # 20 ---> none
 
-write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv")
+# write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/shannon.cst.qr.merged.24.csv")
+write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/shannon.cst.qr.merged.24.csv")
 
 ################################################################################
 
@@ -222,8 +228,9 @@ ggplot(CST_tbl, aes(y=as.factor(biome_id), x=as.factor(CST), fill=Frequency)) +
 
 # Section: Menstrual fluctuations of vaginal microbiota.
 # OLD DATA: menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data.csv")
-menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
-
+# menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
+# RELABELED DATA
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv")
 menses.data <- menses.data %>% 
   rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
   rename_with(~gsub("\\.", "-", .))
@@ -243,7 +250,8 @@ vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>%
   mutate(menses_day = ifelse(menses_status %in% c(1,2,3,7,9,78), "menses", 
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA)))
 
-write.csv(vaginal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+# write.csv(vaginal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+write.csv(vaginal.microbial.menses.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
 
 ############################################# MISSING DATA ISSUES [RESOLVED - 2/12]
 ## Check missing data
@@ -294,7 +302,7 @@ wilcox.test(filter_id_data(menses.table.df, 17)$shannon ~ filter_id_data(menses.
 participant_ids <- unique(vaginal.microbial.menses.24$biome_id)
 all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
 all_days <- data.frame(logDate=as.character(all_days))
-file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/shannon_diversity_logDates/"
+file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/relabeled_data/vaginal_shannon_diversity_logDates/"
 for(id in participant_ids) {
   # print(id)
   file_name_id <- paste0(file_path, id, "_id.png")

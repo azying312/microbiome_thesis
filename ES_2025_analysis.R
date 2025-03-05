@@ -3,12 +3,15 @@
 
 library(tidyverse)
 
-vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+# RELABELED DATA
+vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
+# vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
 
 ########################################################
 ## Corr with volunteer history data
 participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
-shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv", header=TRUE)
+shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/shannon.cst.qr.merged.24.csv", header=TRUE)
+
 # filter non-hormonal & no samples
 participant.data <- participant.data %>% 
   filter(birthControl!="Orilissa (Elagolix)")
@@ -78,15 +81,15 @@ pheatmap(heatmap.mtx2,
          color = brewer.pal(9, "YlGnBu"))
 
 # test normal; significant means, deviates from normal
-shapiro.test(shannon.birthControl$shannon)
+shapiro.test(shannon.birthControl$shannon) # follows normality
 # test if there are significant diffs across categories
 kruskal_test <- kruskal.test(shannon ~ birthControl, data = shannon.birthControl)
-kruskal_test
+# kruskal_test # ignore
 
 # Association between shannon diversity and birth control
-library(FSA)
-dunn_result <- dunnTest(shannon ~ birthControl, data = shannon.birthControl, method = "bonferroni")
-print(dunn_result)
+# library(FSA)
+# dunn_result <- dunnTest(shannon ~ birthControl, data = shannon.birthControl, method = "bonferroni")
+# print(dunn_result)
 
 # Figure: boxplot of birth control and shannon diversity
 ggplot(shannon.birthControl, aes(x = birthControl, y = shannon)) +
@@ -126,7 +129,7 @@ ggplot(shannon.birthControl.avg, aes(x = birthControl, y = avg_shannon)) +
        color = "Biome ID") +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
 
-# Figure: boxplot of shannon diversity by cluster
+# Figure: boxplot of shannon diversity by CST cluster
 ggplot(shannon.birthControl, aes(x = CST, y = shannon)) +
   geom_jitter(aes(color=as.factor(birthControl)), size=1, alpha=0.6) +
   geom_point(aes(color=as.factor(birthControl)), size=1, alpha=0.7) +

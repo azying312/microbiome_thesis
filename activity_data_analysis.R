@@ -13,7 +13,8 @@ ggplot(activity.data, aes(x=factor(biome_id), y=steps, fill="orchid")) +
   theme(legend.position = "none") 
 
 #### Correlate with shannon data
-vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+# vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
 vaginal.microbial.menses.24 <- vaginal.microbial.menses.24[,-1]
 
 # join by date and participant
@@ -21,29 +22,29 @@ activity.data.shannon <- vaginal.microbial.menses.24 %>%
   left_join(activity.data, by=c("biome_id", "logDate"))
 
 # steps
-lm.shannon.activity <- lm(shannon ~ steps, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# total cals burned - significant
-lm.shannon.activity <- lm(shannon ~ calories_burned, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# activity cals burned 
-lm.shannon.activity <- lm(shannon ~ activity_calories, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# distance burned 
-lm.shannon.activity <- lm(shannon ~ distance, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# minutes sedentary
-lm.shannon.activity <- lm(shannon ~ minutes_sedentary, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# minutes lightly active
-lm.shannon.activity <- lm(shannon ~ minutes_lightly_active, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# minutes fairly active
-lm.shannon.activity <- lm(shannon ~ minutes_fairly_active, data = activity.data.shannon)
-summary(lm.shannon.activity)
-# minutes very active
-lm.shannon.activity <- lm(shannon ~ minues_very_active, data = activity.data.shannon)
-summary(lm.shannon.activity)
+# lm.shannon.activity <- lm(shannon ~ steps, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # total cals burned - significant
+# lm.shannon.activity <- lm(shannon ~ calories_burned, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # activity cals burned 
+# lm.shannon.activity <- lm(shannon ~ activity_calories, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # distance burned 
+# lm.shannon.activity <- lm(shannon ~ distance, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # minutes sedentary
+# lm.shannon.activity <- lm(shannon ~ minutes_sedentary, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # minutes lightly active
+# lm.shannon.activity <- lm(shannon ~ minutes_lightly_active, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # minutes fairly active
+# lm.shannon.activity <- lm(shannon ~ minutes_fairly_active, data = activity.data.shannon)
+# summary(lm.shannon.activity)
+# # minutes very active
+# lm.shannon.activity <- lm(shannon ~ minues_very_active, data = activity.data.shannon)
+# summary(lm.shannon.activity)
 
 ### Summary of activity data
 activity.data.summary <- activity.data %>% 

@@ -137,7 +137,8 @@ merged_diet_data_vegetarian <- merged_diet_data %>%
   distinct(biome_id, is_vegetarian)
 
 # Correlate with vegetarian status and vaginal microbiome
-vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+# vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
 vaginal.microbial.menses.24 <- vaginal.microbial.menses.24[,-1]
 
 vaginal.microbial.menses.24.veg <- vaginal.microbial.menses.24 %>% 
@@ -149,8 +150,10 @@ vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>%
 
 vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24.summary %>% 
   left_join(merged_diet_data_vegetarian, by="biome_id")
+
+# participants with no diet data
 vaginal.microbial.menses.24.summary %>% 
-  filter(is.na(is_vegetarian))
+  filter(is.na(is_vegetarian)) # 15, 33 no diet data
 
 vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24.summary %>% 
   filter(!is.na(is_vegetarian)) %>% 
@@ -188,9 +191,9 @@ veg_perc_df <- veg_perc_df %>%
 veg_perc_df <- vaginal.microbial.menses.24 %>% 
   left_join(veg_perc_df, by="biome_id")
 
-# shannon and percent veg
-lm.obj <- lm(shannon ~ perc_veg, data = veg_perc_df)
-summary(lm.obj)
+# shannon and percent veg - cannot analyze like this
+# lm.obj <- lm(shannon ~ perc_veg, data = veg_perc_df)
+# summary(lm.obj)
 
 # average shannon and percent veg
 veg_perc_df_summary  <- veg_perc_df %>% 
@@ -201,7 +204,7 @@ lm.obj.summary <- lm(avg_shannon ~ perc_veg, data = veg_perc_df_summary)
 summary(lm.obj.summary)
 
 #### Correlate with birth control
-shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/shannon.cst.qr.merged.24.csv", header=TRUE)
+shannon.cst.qr.merged.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/shannon.cst.qr.merged.24.csv", header=TRUE)
 shannon.cst.qr.merged.24 <- shannon.cst.qr.merged.24[,-1]
 participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
 
@@ -309,6 +312,12 @@ ggplot(nutrient.diet.22.microbiome, aes(x = protein_prop, y = avg_shannon)) +
   labs(title = "", x = "Protein Intake (Proportion of Total Calories)", y = "Average Shannon Diversity") +
   theme_minimal()
 
+ggplot(nutrient.diet.22.microbiome, aes(x = satFat_prop, y = avg_shannon)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue", se=FALSE) +
+  labs(title = "", x = "Saturated Fat (Proportion of Total Calories)", y = "Average Shannon Diversity") +
+  theme_minimal()
+
 # regress the nutrients on CST
 library(nnet)
 
@@ -330,5 +339,108 @@ ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = dietFib_prop)) +
   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
   labs(title = "", x = "Dietary Fiber Intake", y = "Predicted Probability")
+
+##########################################################################################
+
+### Mixed Effects Models
+library(lme4)
+library(lmerTest)
+
+# Shannon diversity and nutrients
+# vaginal microbiota and specific nutrient intake
+
+nutrient.diet.22.day <- merged_diet_data %>% 
+  group_by(biome_id, Date) %>% 
+  summarise(caloriesall_avg = sum(caloriesall, na.rm=TRUE) / n(), # get avg cals per day
+            cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            satFat_prop = sum(saturatedFatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sodium_prop = sum(sodiumall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            carb_prop = sum(carbohydratesall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            dietFib_prop = sum(dietaryFiberall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sugar_prop = sum(sugarsall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            protein_prop = sum(proteinall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_prop = sum(fatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_cal_prop = sum(caloriesFromFat, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            addedSugarall_prop = sum(addedSugarall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE)) %>% 
+  ungroup() %>% 
+  rename(logDate = Date) %>% 
+  mutate(logDate = as.character(logDate))
+
+# Merge data for samples and nutrition data for the day
+nutrient.diet.22.day.microbiome <- shannon.cst.qr.merged.24 %>% 
+  left_join(nutrient.diet.22.day, by = c("biome_id", "logDate"))
+
+nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome %>% 
+  group_by(biome_id) %>% 
+  filter(n() > 10)
+table(nutrient.diet.22.day.microbiome.filtered$biome_id)
+
+## Different baseline, same slope, different intercept
+
+# vaginal.microbial.menses.24.veg
+nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome.filtered %>% 
+  mutate(caloriesall_avg_scale = scale(caloriesall_avg))
+
+lmer.avg.cal <- lmer(shannon~caloriesall_avg_scale+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+lmer.choles  <- lmer(shannon~cholesterol_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.satfat  <- lmer(shannon~satFat_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.sodium  <- lmer(shannon~sodium_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.carbs   <- lmer(shannon~carb_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.dietfib <- lmer(shannon~dietFib_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.sugar   <- lmer(shannon~sugar_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.prot    <- lmer(shannon~protein_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+lmer.fat     <- lmer(shannon~fat_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+lmer.fat.cal <- lmer(shannon~fat_cal_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+lmer.addsug  <- lmer(shannon~addedSugarall_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+
+summary(lmer.avg.cal)
+summary(lmer.choles )
+summary(lmer.satfat )
+summary(lmer.sodium )
+summary(lmer.carbs  )
+summary(lmer.dietfib)
+summary(lmer.sugar  )
+summary(lmer.prot   )
+summary(lmer.fat    )
+summary(lmer.fat.cal)
+summary(lmer.addsug )
+
+## Random slopes model, different slope, different intercept
+rs_lmer.avg.cal <- lmer(shannon~caloriesall_avg_scale+(caloriesall_avg_scale||biome_id), data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.choles  <- lmer(shannon~cholesterol_prop+(cholesterol_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.satfat  <- lmer(shannon~satFat_prop+(satFat_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.sodium  <- lmer(shannon~sodium_prop+(sodium_prop||`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.carbs   <- lmer(shannon~carb_prop+(carb_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.dietfib <- lmer(shannon~dietFib_prop+(dietFib_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.sugar   <- lmer(shannon~sugar_prop+(sugar_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.prot    <- lmer(shannon~protein_prop+(protein_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.fat     <- lmer(shannon~fat_prop+(fat_prop|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.fat.cal <- lmer(shannon~fat_cal_prop+(fat_cal_prop|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+rs_lmer.addsug  <- lmer(shannon~addedSugarall_prop+(addedSugarall_prop||`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+
+summary(rs_lmer.avg.cal)
+summary(rs_lmer.choles )
+summary(rs_lmer.satfat )
+summary(rs_lmer.sodium )
+summary(rs_lmer.carbs  )
+summary(rs_lmer.dietfib)
+summary(rs_lmer.sugar  )
+summary(rs_lmer.prot   )
+summary(rs_lmer.fat    )
+summary(rs_lmer.fat.cal)
+summary(rs_lmer.addsug )
+
+anova(lmer.avg.cal, rs_lmer.avg.cal)
+anova(lmer.choles, rs_lmer.choles)
+anova(lmer.satfat, rs_lmer.satfat)
+anova(lmer.sodium, rs_lmer.sodium)
+anova(lmer.carbs, rs_lmer.carbs)
+anova(lmer.dietfib, rs_lmer.dietfib)# slightly sign 0.076
+anova(lmer.sugar, rs_lmer.sugar)
+anova(lmer.prot, rs_lmer.prot)
+anova(lmer.fat, rs_lmer.fat)
+anova(lmer.fat.cal, rs_lmer.fat.cal)
+anova(lmer.addsug, rs_lmer.addsug)
+
 
 
