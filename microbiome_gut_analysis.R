@@ -147,7 +147,7 @@ ggplot(top10_relative_df, aes(x = factor(biome_id), y = Relative_Abundance, fill
 
 ###############################################################################################
 # menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
-menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv")
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_3_11.csv")
 menses.data <- menses.data %>% 
   rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
   rename_with(~gsub("\\.", "-", .))
@@ -266,4 +266,22 @@ for(id in participant_ids) {
   
   print(shannon_plt)
 }
- 
+
+####
+
+fecal.microbial.menses.24.filtered <- fecal.microbial.menses.24 %>% 
+  filter(!is.na(survey_menstruate))
+
+ggplot(fecal.microbial.menses.24.filtered, aes(x = as.Date(logDate), y = shannon)) +
+  geom_point(aes(color=as.factor(survey_menstruate))) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(survey_menstruate))) +
+  labs(
+    x = "Days", 
+    y = "Shannon Diversity Index",
+    title = "",
+    color="Menstruate v. No menstruate"
+  ) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+

@@ -269,8 +269,35 @@ anova(diet.birthControl_collapsed,diet.birthControl_collapsed2)
 aov.diet.birthCtrl <- aov(shannon.birthControl.collapsed.diet$avg_shannon ~ shannon.birthControl.collapsed.diet$birthControl_collapsed)
 summary(aov.diet.birthCtrl)
 
-##########################################################################################
+# Diet: scatter plot of percent vegetarian on shannon diversity
+plot(veg_perc_df$shannon, veg_perc_df$perc_veg)
+ggplot(veg_perc_df, aes(x = shannon, y = perc_veg)) +
+  geom_point() +
+  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
+       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  theme_minimal()
 
+# Diet: scatter plot of percent vegetarian on average shannon diversity
+ggplot(veg_perc_df_summary, aes(x = avg_shannon, y = perc_veg)) +
+  geom_point() +
+  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
+       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  theme_minimal()
+
+# Diet: scatter plot of percent vegetarian on average shannon diversity colored by Birth control
+ggplot(shannon.birthControl.collapsed.diet, aes(x = avg_shannon, y = perc_veg, color=birthControl)) +
+  geom_point() +
+  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
+       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  theme_minimal()
+
+ggplot(shannon.birthControl.collapsed.diet, aes(x = avg_shannon, y = perc_veg, color=birthControl_collapsed)) +
+  geom_point() +
+  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
+       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  theme_minimal()
+
+##########################################################################################
 
 # vaginal microbiota and specific nutrient intake
 
@@ -317,6 +344,11 @@ ggplot(nutrient.diet.22.microbiome, aes(x = satFat_prop, y = avg_shannon)) +
   geom_smooth(method = "lm", col = "blue", se=FALSE) +
   labs(title = "", x = "Saturated Fat (Proportion of Total Calories)", y = "Average Shannon Diversity") +
   theme_minimal()
+
+# Diet nutrients: pairwise plots for correlation between nutrients
+macronutrients <- nutrient.diet.22.microbiome %>% 
+  select(!c(biome_id, avg_shannon, max_CST))
+pairs(macronutrients)
 
 # regress the nutrients on CST
 library(nnet)
@@ -378,6 +410,25 @@ table(nutrient.diet.22.day.microbiome.filtered$biome_id)
 
 ## Different baseline, same slope, different intercept
 
+# Full model (no avg cal)
+lmer.full <- lmer(shannon~.+(1|`biome_id`), 
+                  data = nutrient.diet.22.day.microbiome.filtered[, !names(nutrient.diet.22.day.microbiome.filtered) %in%
+                                                                    c(
+                                                                      "SampleID",
+                                                                      "CST",
+                                                                      "qr",
+                                                                      "status",
+                                                                      "logDate",
+                                                                      "status",
+                                                                      "timestamp",
+                                                                      "sampleType",
+                                                                      "max_taxa",
+                                                                      "OTU",
+                                                                      "caloriesall_avg"
+                                                                    )])
+summary(lmer.full)
+r2(lmer.full)
+
 # vaginal.microbial.menses.24.veg
 nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome.filtered %>% 
   mutate(caloriesall_avg_scale = scale(caloriesall_avg))
@@ -420,6 +471,22 @@ summary(lmer.fat.cal)
 summary(lmer.addsug )
 
 ## Random slopes model, different slope, different intercept
+
+# Full model (no avg cal)
+rs_full_model <- lmer(shannon~cholesterol_prop+(cholesterol_prop|`biome_id`)+
+                        # satFat_prop+(satFat_prop|`biome_id`)+
+                        # sodium_prop+(sodium_prop||`biome_id`)+
+                        carb_prop+(carb_prop|`biome_id`)+
+                        # dietFib_prop+(dietFib_prop|`biome_id`)+
+                        # sugar_prop+(sugar_prop|`biome_id`)+
+                        # protein_prop+(protein_prop|`biome_id`)+
+                        # fat_cal_prop+(fat_cal_prop|`biome_id`)+
+                        # addedSugarall_prop+(addedSugarall_prop||`biome_id`)+
+                        fat_prop+(fat_prop|`biome_id`)
+                      ,  data=nutrient.diet.22.day.microbiome.filtered)
+r2(rs_full_model)
+summary(rs_full_model)
+
 rs_lmer.avg.cal <- lmer(shannon~caloriesall_avg_scale+(caloriesall_avg_scale||biome_id), data=nutrient.diet.22.day.microbiome.filtered)
 rs_lmer.choles  <- lmer(shannon~cholesterol_prop+(cholesterol_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
 rs_lmer.satfat  <- lmer(shannon~satFat_prop+(satFat_prop|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)

@@ -1,14 +1,15 @@
 library(vegan)
-library(pheatmap)
+# library(pheatmap)
+library(phyloseq)
 library(tidyverse)
-library(Matrix)
-
-library(cluster)
-library("igraph")
-library("markovchain")
-library("RColorBrewer")
-library("gridExtra")
-library(viridis)
+# library(Matrix)
+# 
+# library(cluster)
+# library("igraph")
+# library("markovchain")
+# library("RColorBrewer")
+# library("gridExtra")
+# library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
@@ -93,8 +94,6 @@ colnames(sample.cst) <- "CST"
 rownames(sample.cst) <- rownames(bacteria_metadata_df)
 sample.cst$SampleID <- rownames(sample.cst)
 
-
-
 ################################################################################
 
 head(bacteria_metadata_df)
@@ -134,8 +133,8 @@ shannon.qr.merged.24 <- merge(shannon.df.24, bacteria_metadata_df, by="SampleID"
 shannon.cst.qr.merged.24 <- merge(sample.cst, shannon.qr.merged.24, by="SampleID") %>%
   mutate(biome_id=as.integer(biome_id)) %>% 
   filter(!is.na(biome_id)) %>% 
-  # Filter the data to be within study days: 10-14 to 12-14
-  filter(logDate > "2022-10-12" & logDate < "2022-12-16") # 2038 to 1971 --> 1571 in relabeled
+  # Filter the data to be within study days: 10-13 to 12-14
+  filter(logDate > "2022-10-11" & logDate < "2022-12-16") # 2038 to 1971 --> 1571 in relabeled
 
 # Save R environment - did not resave after relabeling data
 # save.image("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
@@ -230,7 +229,7 @@ ggplot(CST_tbl, aes(y=as.factor(biome_id), x=as.factor(CST), fill=Frequency)) +
 # OLD DATA: menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data.csv")
 # menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
 # RELABELED DATA
-menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv")
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_3_11.csv")
 menses.data <- menses.data %>% 
   rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
   rename_with(~gsub("\\.", "-", .))
@@ -367,6 +366,50 @@ ggplot(vaginal.microbial.menses.24.summary, aes(x=menses_day_not_menses, y=mense
        title="Average Shannon Diversity for Participants")
 
 ##########################################################################################
+
+# Long term CST transition - participant shifts from one CST to another and stays in the new CST for 10 days or more
+longterm_cst_vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>% 
+  select(SampleID, CST, shannon, qr, biome_id, logDate, sampleType, max_taxa, OTU, menses_day) %>% 
+  filter(!is.na(menses_day)) %>% 
+  arrange(biome_id, logDate) %>% 
+  group_by(biome_id) %>% 
+  mutate(CST_previous = lag(CST),   
+         transition = CST != CST_previous)
+
+longterm_cst_vaginal.microbial.menses.24 <- longterm_cst_vaginal.microbial.menses.24 %>%
+  mutate(logDate = as.Date(logDate)) %>% 
+  group_by(biome_id, CST) %>%
+  mutate(duration = as.numeric(difftime(max(logDate), min(logDate), units = "days"))) %>%
+  ungroup()
+
+table(longterm_cst_vaginal.microbial.menses.24$duration)
+
+## Max gap in samples
+max_gaps <- longterm_cst_vaginal.microbial.menses.24 %>%
+  arrange(biome_id, logDate) %>%
+  group_by(biome_id) %>%
+  mutate(day_gap = as.numeric(difftime(logDate, lag(logDate), units = "days"))) %>%
+  summarise(max_gap = max(day_gap, na.rm = TRUE))
+table(max_gaps$max_gap)
+
+# 10 day length
+long_term_transitions <- longterm_cst_vaginal.microbial.menses.24 %>%
+  filter(transition == TRUE, duration >= 10)
+
+# Count transitions during and outside of menses
+transition_counts <- long_term_transitions %>%
+  group_by(menses_day) %>%
+  summarise(count = n())
+
+# test if transition more likely in menses
+binom.test(x = transition_counts$count[transition_counts$menses_day == "menses"][1], 
+           n = sum(transition_counts$count), 
+           p = 0.5)
+
+length(unique(long_term_transitions$biome_id))
+
+##########################################################################################
+
 # XXX
 
 
