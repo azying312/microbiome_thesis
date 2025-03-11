@@ -463,3 +463,98 @@ bacterial_plotting3 <- function(data, participantID, logDate_list){
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 }
+
+#' microbial sample plots
+#'
+#' @param bacterial.data input
+#' 
+#' @export
+bacterial_plotting4 <- function(bacterial.data){
+  
+  participant_sample <- prune_samples(sample_names(bacterial.data), bacterial.data)
+  
+  # aggregate
+  sample_aggregate <- tax_glom(participant_sample, "Genus")
+  sample_aggregate_rel <- transform_sample_counts(sample_aggregate, function(x) x / sum(x))
+  sample_aggregate_rel_df <- psmelt(sample_aggregate_rel)
+  
+  top20 <- sample_aggregate_rel_df %>%
+    group_by(Genus) %>%
+    summarize(TotalAbundance = sum(Abundance)) %>%
+    top_n(20, TotalAbundance) %>%
+    pull(Genus)
+  sample_aggregate_rel_df_top20 <- sample_aggregate_rel_df %>% filter(Genus %in% top20)
+  
+  ggplot(sample_aggregate_rel_df_top20, aes(x = Sample, y = Abundance, fill = Genus)) +
+    geom_bar(stat = "identity", position = "stack") +
+    theme_minimal() +
+    scale_fill_manual(values = c(
+      "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",
+      "#FFFF33", "#A65628", "#F781BF", "#999999", "#66C2A5",
+      "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F",
+      "#E5C494", "#B3B3B3", "#1B9E77", "#D95F02", "#7570B3",
+      "#7B4173", "#D6616B"
+    )) +
+    labs(title = "Microbial Composition",
+         x = "Sample ID",
+         y = "Relative Abundance") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+}
+
+
+#' mixed effects model, fixed slope
+#'
+#' @param data input
+#' @param thres input
+#' @param response input
+#' @param fixed input
+#' @export lmer_models
+mixed_effects_fixed_slope <- function(data, thres, response, fixed_list){
+  
+  data.filtered <- data %>% 
+    group_by(biome_id) %>% 
+    filter(n() > thres) %>% 
+    ungroup()
+  # table(data$biome_id)
+  
+  lmer_models <- list()
+  
+  for(fixed in fixed_list) {
+    lmer.formula <- as.formula(paste(response, "~", fixed, "+ (1|biome_id)"))
+    lmer.obj <- lmer(lmer.formula, data=data.filtered)
+    
+    lmer_models[[fixed]] <- lmer.obj
+  }
+  
+  return(lmer_models)
+  
+}
+
+#' mixed effects model, random slope
+#'
+#' @param data input
+#' @param thres input
+#' @param response input
+#' @param fixed input
+#' @export lmer_models
+mixed_effects_rnd_slope <- function(data, thres, response, fixed_list){
+  
+  data.filtered <- data %>% 
+    group_by(biome_id) %>% 
+    filter(n() > thres) %>% 
+    ungroup()
+  # table(data$biome_id)
+  
+  lmer_models <- list()
+  
+  for(fixed in fixed_list) {
+    lmer.formula <- as.formula(paste(response, "~", fixed, "+ (", fixed, "|biome_id)"))
+    lmer.obj <- lmer(lmer.formula, data=data.filtered)
+    
+    lmer_models[[fixed]] <- lmer.obj
+  }
+  
+  return(lmer_models)
+  
+}

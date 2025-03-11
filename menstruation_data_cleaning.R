@@ -1,7 +1,7 @@
 ########################
 #
 # Clean Menstruation Data
-# 26 Feb 2025
+# Last update: 03/11
 #
 # Dataset Outputs: cleaned_menstruation_data.csv & cleaned_vaginal_samples_data.csv
 #
@@ -20,7 +20,7 @@ survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 # samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
 # re labeled
-samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv", header=TRUE)
+samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
 
 # Data Prep
 menses_data <- menses_data %>%
@@ -65,7 +65,7 @@ vaginal_samples <- samples_data %>%
 uminn_data_subset <- uminn_data_subset %>% 
   left_join(vaginal_samples, by="qr") %>% 
   filter(!is.na(sampleType))
-dim(uminn_data_subset) # 1600   10 | 1562 10
+dim(uminn_data_subset) # 1600 10 -> 1563   10
 
 # clean UMinn samples
 uminn_data_subset <- uminn_data_subset %>% 

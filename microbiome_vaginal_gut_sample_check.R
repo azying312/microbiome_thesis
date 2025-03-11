@@ -8,13 +8,40 @@ metadata.22 <- sample_data(bacterial.data)
 
 vaginal.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")
 vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/vaginal.microbial.menses.24.csv")
+# vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
+# vaginal.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_cleaned_max_taxa.rds")
 
 gut.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
 gut.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/gut.microbial.menses.24.csv")
+# gut.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")
+# gut.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut.microbial.menses.24.csv")
 
 #### Participant 1
 # 2022-12-01
 bacterial_plotting(vaginal.data, 1, "2022-12-01")
+
+## Plot gut
+gut.data.1 <- prune_samples(sample_data(gut.data)$biome_id == 1, gut.data)
+bacterial_plotting2(gut.data.1)
+
+## Plot vaginal
+vaginal.data.1 <- prune_samples(sample_data(vaginal.data)$biome_id == 1, vaginal.data)
+bacterial_plotting2(vaginal.data.1)
+
+#### Participant 2
+bacterial_plotting(gut.data, 2, "2022-12-05") # S7355_V3V5_S98
+bacterial_plotting(vaginal.data, 2, "2022-12-05")
+
+## Plot gut
+gut.data.2 <- prune_samples(sample_data(gut.data)$biome_id == 2, gut.data)
+bacterial_plotting2(gut.data.2)
+
+## Plot vaginal
+vaginal.data.2 <- prune_samples(sample_data(vaginal.data)$biome_id == 2, vaginal.data)
+bacterial_plotting2(vaginal.data.2)
+
+# Swap swabs
+sample_data(bacterial.data)["S7355_V3V5_S98", "sampleType"] <- "vaginal"
 
 #### Participant 3
 # 2022-12-05
@@ -36,7 +63,7 @@ sample_data(bacterial.data)["F1849_V3V5_S1633", "sampleType"] <- "vaginal"
 #### Participant 4
 # 2022-10-25
 bacterial_plotting(vaginal.data, 4, c("2022-10-26", "2022-11-03")) # S8993_V3V5_S1237, S951_V3V5_S1184
-bacterial_plotting(gut.data, 4, "2022-12-10") # 
+bacterial_plotting(gut.data, 4, "2022-12-10") 
 
 ## Plot gut
 gut.data.4 <- prune_samples(sample_data(gut.data)$biome_id == 4, gut.data)
@@ -60,7 +87,6 @@ bacterial_plotting2(gut.data.5)
 vaginal.data.5 <- prune_samples(sample_data(vaginal.data)$biome_id == 5, vaginal.data)
 bacterial_plotting2(vaginal.data.5)
 
-
 #### Participant 6
 
 ## Plot gut
@@ -73,6 +99,10 @@ bacterial_plotting2(vaginal.data.6)
 
 #### Participant 7
 
+bacterial_plotting3(gut.data, 7, "2022-11-20") # F1594_V3V5_S1096
+bacterial_plotting(gut.data, 7, "2022-10-15") # S1587_2_V3V5_S1535 - CANT CONFIRM same sample 2 different plots # S1587_2_V3V5_S1535 and S1587_V3V5_S1247 -- these are the same sample b/c the qr code is S1587 -> keep as fecal sample
+bacterial_plotting(vaginal.data, 7, "2022-10-15") # S1583_V3V5_S384
+
 ## Plot gut
 gut.data.7 <- prune_samples(sample_data(gut.data)$biome_id == 7, gut.data) # F1594_V3V5_S1096, S1587_2_V3V5_S1535 - CANT CONFIRM
 bacterial_plotting2(gut.data.7)
@@ -81,7 +111,25 @@ bacterial_plotting2(gut.data.7)
 vaginal.data.7 <- prune_samples(sample_data(vaginal.data)$biome_id == 7, vaginal.data) # S1853_V3V5_S384 - CANT CONFIRM
 bacterial_plotting2(vaginal.data.7)
 
+# Swap swabs
+sample_data(bacterial.data)["F1594_V3V5_S1096", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S1583_V3V5_S384", "sampleType"] <- "fecal"
+
+#### Participant 9 - not enough samples in vaginal to tell
+bacterial_plotting(vaginal.data, 9, "2022-10-26") # CANT TELL
+
+vaginal.data.9 <- prune_samples(sample_data(vaginal.data)$biome_id == 9, vaginal.data)
+bacterial_plotting2(vaginal.data.9)
+
+gut.data.9 <- prune_samples(sample_data(gut.data)$biome_id == 9, gut.data) # 
+bacterial_plotting2(gut.data.9)
+
 #### Participant 10
+
+bacterial_plotting(vaginal.data, 10, "2022-11-02") # S3988_V3V5_S1650 
+bacterial_plotting3(vaginal.data, 10, "2022-11-12") # S8839_V3V5_S1497 
+bacterial_plotting(gut.data, 10, "2022-11-07") # S8812_V3V5_S142
+bacterial_plotting(gut.data, 10, "2022-11-12") # S8811_thawed_V3V5_S1751
 
 ## Plot gut
 gut.data.10 <- prune_samples(sample_data(gut.data)$biome_id == 10, gut.data) # S3977_2_V3V5_S1523, S8810_thawed_V3V5_S1751, S8812_V3V5_S142
@@ -92,12 +140,10 @@ vaginal.data.10 <- prune_samples(sample_data(vaginal.data)$biome_id == 10, vagin
 bacterial_plotting2(vaginal.data.10)
 
 # Swap swabs
-sample_data(bacterial.data)["S3977_2_V3V5_S1523", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S3977_V3V5_S1235", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S8810_thawed_V3V5_S1751", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S8812_V3V5_S142", "sampleType"] <- "vaginal"
 sample_data(bacterial.data)["S3988_V3V5_S1650", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S8839_V3V5_S1497", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S8811_thawed_V3V5_S1751", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S8812_V3V5_S142", "sampleType"] <- "vaginal"
 
 #### Participant 11
 bacterial_plotting(vaginal.data, 11, "2022-11-14") # F1442_V3V5_S1520
@@ -134,6 +180,10 @@ sample_data(bacterial.data)["S8371_V3V5_S1697", "sampleType"] <- "fecal"
 
 #### Participant 13
 
+bacterial_plotting3(gut.data, 13, "2022-10-20") # S2549_V3V5_S1102
+bacterial_plotting(gut.data, 13, "2022-10-28") # S2491_V3V5_S1279
+bacterial_plotting3(gut.data, 13, "2022-11-05") # S7378_thawed_V3V5_S616
+
 ## Plot gut
 gut.data.13 <- prune_samples(sample_data(gut.data)$biome_id == 13, gut.data)
 bacterial_plotting2(gut.data.13)
@@ -141,6 +191,11 @@ bacterial_plotting2(gut.data.13)
 ## Plot vaginal
 vaginal.data.13 <- prune_samples(sample_data(vaginal.data)$biome_id == 13, vaginal.data)
 bacterial_plotting2(vaginal.data.13)
+
+# Swap swabs
+sample_data(bacterial.data)["S2549_V3V5_S1102", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S2491_V3V5_S1279", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S7378_thawed_V3V5_S616", "sampleType"] <- "vaginal"
 
 #### Participant 14
 
@@ -160,7 +215,31 @@ sample_data(bacterial.data)["S18_V3V5_S1536", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S7953_V3V5_S1713", "sampleType"] <- "fecal"
 
 #### Participant 15
+
+## Plot gut
+gut.data.15 <- prune_samples(sample_data(gut.data)$biome_id == 15, gut.data)
+bacterial_plotting2(gut.data.15)
+
+## Plot vaginal
+vaginal.data.15 <- prune_samples(sample_data(vaginal.data)$biome_id == 15, vaginal.data)
+bacterial_plotting2(vaginal.data.15)
+
 #### Participant 16
+
+bacterial_plotting(vaginal.data, 16, "2022-11-08") # S6299_thawed_blood_V3V5_S1473
+bacterial_plotting(vaginal.data, 16, "2022-11-03") # S7769_blood_V3V5_S1889
+
+## Plot gut
+gut.data.16 <- prune_samples(sample_data(gut.data)$biome_id == 16, gut.data)
+bacterial_plotting2(gut.data.16)
+
+## Plot vaginal
+vaginal.data.16 <- prune_samples(sample_data(vaginal.data)$biome_id == 16, vaginal.data)
+bacterial_plotting2(vaginal.data.16)
+
+# Swap swabs
+sample_data(bacterial.data)["S6299_thawed_blood_V3V5_S1473", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S7769_blood_V3V5_S1889", "sampleType"] <- "fecal"
 
 #### Participant 17
 
@@ -179,11 +258,11 @@ bacterial_plotting2(vaginal.data.17)
 sample_data(bacterial.data)["S9274_V3V5_S1542", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["F264_V3V5_S1347", "sampleType"] <- "fecal"
 
-
 #### Participant 18
 
 bacterial_plotting(vaginal.data, 18, "2022-11-07") # S7293_V3V5_S153
 bacterial_plotting(gut.data, 18, "2022-10-18") # S1814_V3V5_S388
+bacterial_plotting(gut.data, 18, "2022-11-02") # S5354_V3V5_S1718
 
 ## Plot gut
 gut.data.18 <- prune_samples(sample_data(gut.data)$biome_id == 18, gut.data)
@@ -196,13 +275,33 @@ bacterial_plotting2(vaginal.data.18)
 # Swap swabs
 sample_data(bacterial.data)["S7293_V3V5_S153", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S1814_V3V5_S388", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S5354_V3V5_S1718", "sampleType"] <- "vaginal"
 
 #### Participant 20
+
+## Plot gut
+gut.data.20 <- prune_samples(sample_data(gut.data)$biome_id == 20, gut.data)
+bacterial_plotting2(gut.data.20)
+
+## Plot vaginal
+vaginal.data.20 <- prune_samples(sample_data(vaginal.data)$biome_id == 20, vaginal.data)
+bacterial_plotting4(vaginal.data.20)
+
 #### Participant 21
+
+## Plot gut
+gut.data.21 <- prune_samples(sample_data(gut.data)$biome_id == 21, gut.data)
+bacterial_plotting2(gut.data.21)
+
+## Plot vaginal
+vaginal.data.21 <- prune_samples(sample_data(vaginal.data)$biome_id == 21, vaginal.data)
+bacterial_plotting4(vaginal.data.21)
 
 #### Participant 22
 
-bacterial_plotting(gut.data, 22, "2022-10-26") # S2169_V3V5_S1589
+bacterial_plotting(gut.data, 22, "2022-10-26") # S2173_V3V5_S1847
+bacterial_plotting(gut.data, 22, "2022-11-06") # S9792_thawed_V3V5_S611
+bacterial_plotting(vaginal.data, 22, "2022-10-31") # S2179_V3V5_S1218
 
 ## Plot gut
 gut.data.22 <- prune_samples(sample_data(gut.data)$biome_id == 22, gut.data)
@@ -213,7 +312,9 @@ vaginal.data.22 <- prune_samples(sample_data(vaginal.data)$biome_id == 22, vagin
 bacterial_plotting2(vaginal.data.22)
 
 # Swap swabs
-sample_data(bacterial.data)["S2169_V3V5_S1589", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S2173_V3V5_S1847", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S9792_thawed_V3V5_S611", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S2179_V3V5_S1218", "sampleType"] <- "fecal"
 
 #### Participant 23
 
@@ -234,11 +335,21 @@ sample_data(bacterial.data)["F1781_V3V5_S1084", "sampleType"] <- "fecal"
 
 #### Participant 24
 
+## Plot gut
+gut.data.24 <- prune_samples(sample_data(gut.data)$biome_id == 24, gut.data)
+bacterial_plotting2(gut.data.24)
+
+## Plot vaginal
+vaginal.data.24 <- prune_samples(sample_data(vaginal.data)$biome_id == 24, vaginal.data)
+bacterial_plotting2(vaginal.data.24)
+
 #### Participant 25
 
+bacterial_plotting(gut.data, 25, "2022-10-29") # S6503_blood_V3V5_S347
 bacterial_plotting(vaginal.data, 25, "2022-11-03") # S7323_V3V5_S172
 
 ## Plot gut
+
 gut.data.25 <- prune_samples(sample_data(gut.data)$biome_id == 25, gut.data)
 bacterial_plotting2(gut.data.25)
 
@@ -247,6 +358,7 @@ vaginal.data.25 <- prune_samples(sample_data(vaginal.data)$biome_id == 25, vagin
 bacterial_plotting2(vaginal.data.25)
 
 # Swap swabs
+sample_data(bacterial.data)["S6503_blood_V3V5_S347", "sampleType"] <- "vaginal"
 sample_data(bacterial.data)["S7323_V3V5_S172", "sampleType"] <- "fecal"
 
 #### Participant 26
@@ -257,7 +369,8 @@ sample_data(bacterial.data)["S7323_V3V5_S172", "sampleType"] <- "fecal"
 
 #### Participant 32
 
-bacterial_plotting(gut.data, 32, "2022-10-19") # S1007_V3V5_S499
+bacterial_plotting(gut.data, 32, "2022-10-19") # S1005_V3V5_S385
+# bacterial_plotting(vaginal.data, 32, "2022-10-19") #
 
 ## Plot gut
 gut.data.32 <- prune_samples(sample_data(gut.data)$biome_id == 32, gut.data)
@@ -268,7 +381,7 @@ vaginal.data.32 <- prune_samples(sample_data(vaginal.data)$biome_id == 32, vagin
 bacterial_plotting2(vaginal.data.32)
 
 # Swap swabs
-sample_data(bacterial.data)["S1007_V3V5_S499", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S1005_V3V5_S385", "sampleType"] <- "vaginal"
 
 #### Participant 33
 
@@ -333,7 +446,7 @@ sample_data(bacterial.data)["S8947_V3V5_S104", "sampleType"] <- "vaginal"
 
 #### Participant 39
 
-bacterial_plotting(vaginal.data, 39, "2022-10-15") # S3244_V3V5_S1187
+bacterial_plotting(vaginal.data, 39, "2022-10-15") # S3244_V3V5_S1187, S3244_2_V3V5_S1475
 bacterial_plotting(vaginal.data, 39, "2022-11-07") # S2866_thawed_V3V5_S672
 
 ## Plot gut
@@ -367,7 +480,33 @@ sample_data(bacterial.data)["S1747_V3V5_S860", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S8467_thawed_V3V5_S244", "sampleType"] <- "vaginal"
 
 #### Participant 41
+
+bacterial_plotting(gut.data, 41, c("2022-12-04")) # S9711_V3V5_S1390
+
+## Plot gut
+gut.data.41 <- prune_samples(sample_data(gut.data)$biome_id == 41, gut.data)
+bacterial_plotting2(gut.data.41)
+
+## Plot vaginal
+vaginal.data.41 <- prune_samples(sample_data(vaginal.data)$biome_id == 41, vaginal.data)
+bacterial_plotting2(vaginal.data.41)
+
+# Swap swabs
+sample_data(bacterial.data)["S9711_V3V5_S1390", "sampleType"] <- "vaginal"
+
 #### Participant 42
+bacterial_plotting(vaginal.data, 42, c("2022-11-04")) # S5016_blood_V3V5_S1830
+
+## Plot gut
+gut.data.42 <- prune_samples(sample_data(gut.data)$biome_id == 42, gut.data)
+bacterial_plotting2(gut.data.42)
+
+## Plot vaginal
+vaginal.data.42 <- prune_samples(sample_data(vaginal.data)$biome_id == 42, vaginal.data)
+bacterial_plotting2(vaginal.data.42)
+
+# Swap swabs
+sample_data(bacterial.data)["S5016_blood_V3V5_S1830", "sampleType"] <- "fecal"
 
 #### Participant 43
 
@@ -386,9 +525,22 @@ sample_data(bacterial.data)["S3854_V3V5_S185", "sampleType"] <- "vaginal"
 
 #### Participant 44
 
-bacterial_plotting(gut.data, 44, "2022-10-16") # S3195_V3V5_S191 - CAN'T CONFIRM
+bacterial_plotting(gut.data, 44, "2022-11-02") # S9249_V3V5_S177
+
+## Plot gut
+gut.data.44 <- prune_samples(sample_data(gut.data)$biome_id == 44, gut.data)
+bacterial_plotting2(gut.data.44) 
+
+## Plot vaginal
+vaginal.data.44 <- prune_samples(sample_data(vaginal.data)$biome_id == 44, vaginal.data)
+bacterial_plotting2(vaginal.data.44)
+
+# Swap swabs
+sample_data(bacterial.data)["S9249_V3V5_S177", "sampleType"] <- "vaginal"
 
 #### Participant 45
+
+bacterial_plotting(gut.data, 45, "2022-10-13") # S3971_V3V5_S1166
 
 ## Plot gut
 gut.data.45 <- prune_samples(sample_data(gut.data)$biome_id == 45, gut.data)
@@ -397,6 +549,9 @@ bacterial_plotting2(gut.data.45)
 ## Plot vaginal
 vaginal.data.45 <- prune_samples(sample_data(vaginal.data)$biome_id == 45, vaginal.data)
 bacterial_plotting2(vaginal.data.45)
+
+# Swap swabs
+sample_data(bacterial.data)["S3971_V3V5_S1166", "sampleType"] <- "vaginal"
 
 #### Participant 46
 
@@ -414,6 +569,14 @@ bacterial_plotting2(vaginal.data.46)
 sample_data(bacterial.data)["S1352_V3V5_S1453", "sampleType"] <- "fecal"
 
 #### Participant 47
+
+## Plot gut
+gut.data.47 <- prune_samples(sample_data(gut.data)$biome_id == 47, gut.data)
+bacterial_plotting2(gut.data.47)
+
+## Plot vaginal
+vaginal.data.47 <- prune_samples(sample_data(vaginal.data)$biome_id == 47, vaginal.data)
+bacterial_plotting2(vaginal.data.47)
 
 #### Participant 48
 
@@ -440,7 +603,8 @@ sample_data(bacterial.data)["F473_blood_V3V5_S1898", "sampleType"] <- "vaginal"
 
 #### Participant 49
 
-bacterial_plotting(gut.data, 49, "2022-10-16") # S3791_2_V3V5_S1511
+# bacterial_plotting(gut.data, 49, "2022-10-16") # S3791_2_V3V5_S1511 - didn't reassign, same sample looks like gut - there is a vaginal sample on this day as well
+bacterial_plotting(vaginal.data, 49, "2022-10-16") # S3791_V3V5_S1223
 
 ## Plot gut
 gut.data.49 <- prune_samples(sample_data(gut.data)$biome_id == 49, gut.data)
@@ -449,9 +613,6 @@ bacterial_plotting2(gut.data.49)
 ## Plot vaginal
 vaginal.data.49 <- prune_samples(sample_data(vaginal.data)$biome_id == 49, vaginal.data)
 bacterial_plotting2(vaginal.data.49)
-
-sample_data(bacterial.data)["S3791_2_V3V5_S1511", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S3791_V3V5_S1223", "sampleType"] <- "vaginal"
 
 #### Participant 50
 
@@ -502,7 +663,7 @@ sample_data(bacterial.data)["S4103_V3V5_S1175", "sampleType"] <- "fecal"
 
 bacterial_plotting(vaginal.data, 53, "2022-10-20") # S1719_V3V5_S755
 bacterial_plotting3(gut.data, 53, "2022-10-20") # S1721_V3V5_S1432
-bacterial_plotting3(gut.data, 53, "2022-10-17") # "S2558_2_V3V5_S1499
+bacterial_plotting3(gut.data, 53, "2022-10-16")
 
 ## Plot gut
 gut.data.53 <- prune_samples(sample_data(gut.data)$biome_id == 53, gut.data)
@@ -515,8 +676,6 @@ bacterial_plotting2(vaginal.data.53)
 # Swap swabs
 sample_data(bacterial.data)["S1719_V3V5_S755", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S1721_V3V5_S1432", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S2558_2_V3V5_S1499", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S2558_V3V5_S1211", "sampleType"] <- "vaginal"
 
 #### Participant 54
 
@@ -535,7 +694,7 @@ sample_data(bacterial.data)["S8491_V3V5_S418", "sampleType"] <- "fecal"
 
 #### Participant 55
 
-bacterial_plotting(gut.data, 55, "2022-10-15") # S2792_V3V5_S761
+bacterial_plotting(gut.data, 55, "2022-10-15") # S2798_V3V5_S729
 bacterial_plotting(vaginal.data, 55, "2022-11-03") # S2448_thawed_V3V5_S225
 
 ## Plot gut
@@ -548,21 +707,22 @@ bacterial_plotting2(vaginal.data.55)
 
 # Swap swabs
 sample_data(bacterial.data)["S2448_thawed_V3V5_S225", "sampleType"] <- "fecal"
-sample_data(bacterial.data)["S2792_V3V5_S761", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S2798_V3V5_S729", "sampleType"] <- "vaginal"
 
 #### Participant 56
 
-bacterial_plotting(vaginal.data, 56, "2022-10-16") # S4693_V3V5_S1185
+bacterial_plotting(vaginal.data, 56, "2022-12-02") # F2590_V3V5_S1087
+bacterial_plotting(vaginal.data, 56, "2022-10-16") # S4629_blood_V3V5_S299
 bacterial_plotting(vaginal.data, 56, "2022-10-23") # S4659_V3V5_S1596
-bacterial_plotting(vaginal.data, 56, "2022-10-25") # S4691_V3V5_S1256
+bacterial_plotting(vaginal.data, 56, "2022-10-25") #S4691_V3V5_S1256
 bacterial_plotting(vaginal.data, 56, "2022-10-30") # S6378_V3V5_S1722
+bacterial_plotting(vaginal.data, 56, "2022-11-05") # S6397_thawed_V3V5_S580
 bacterial_plotting(vaginal.data, 56, "2022-11-02") # S6409_V3V5_S1224
 bacterial_plotting(vaginal.data, 56, "2022-11-03") # S6415_V3V5_S1662
-bacterial_plotting(vaginal.data, 56, "2022-11-05") # S6397_thawed_V3V5_S580
 bacterial_plotting(vaginal.data, 56, "2022-11-06") # S6468_thawed_V3V5_S671
-bacterial_plotting(vaginal.data, 56, "2022-11-17") # S6723_V3V5_S1738
 bacterial_plotting(vaginal.data, 56, "2022-11-22") # S6712_V3V5_S1135
 bacterial_plotting(vaginal.data, 56, "2022-11-27") # S6716_V3V5_S1666
+bacterial_plotting(vaginal.data, 56, "2022-11-17") # S6723_V3V5_S1738
 bacterial_plotting3(gut.data, 56, "2022-12-05") # S6403_V3V5_S1726
 
 ## Plot gut
@@ -574,20 +734,25 @@ vaginal.data.56 <- prune_samples(sample_data(vaginal.data)$biome_id == 56, vagin
 bacterial_plotting2(vaginal.data.56)
 
 # Swap swabs
-sample_data(bacterial.data)["S4693_V3V5_S1185", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["F2590_V3V5_S1087", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S4629_blood_V3V5_S299", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S4659_V3V5_S1596", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S4691_V3V5_S1256", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6378_V3V5_S1722", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S6397_thawed_V3V5_S580", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6409_V3V5_S1224", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6415_V3V5_S1662", "sampleType"] <- "fecal"
-sample_data(bacterial.data)["S6397_thawed_V3V5_S580", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6468_thawed_V3V5_S671", "sampleType"] <- "fecal"
-sample_data(bacterial.data)["S6723_V3V5_S1738", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6712_V3V5_S1135", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6716_V3V5_S1666", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S6723_V3V5_S1738", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["S6403_V3V5_S1726", "sampleType"] <- "vaginal"
 
-#### Participant 58
+#### Participant 58 
+
+## Plot vaginal
+vaginal.data.58 <- prune_samples(sample_data(vaginal.data)$biome_id == 58, vaginal.data)
+bacterial_plotting2(vaginal.data.58)
 
 #### Participant 59
 
@@ -665,8 +830,13 @@ sample_data(bacterial.data)["S8297_thawed_V3V5_S668", "sampleType"] <- "fecal"
 
 #### Participant 64
 
-bacterial_plotting(vaginal.data, 64, "2022-10-23") # S3326_V3V5_S1182
 bacterial_plotting3(gut.data, 64, "2022-11-26") # F74_capoff_V3V5_S1673
+bacterial_plotting3(gut.data, 64, "2022-12-10") # F960_thawed_V3V5_S194
+bacterial_plotting(gut.data, 64, "2022-10-13") # S1509_V3V5_S243
+bacterial_plotting(vaginal.data, 64, "2022-10-23") # S3326_V3V5_S1182
+bacterial_plotting3(vaginal.data, 64, "2022-12-12") # F901_thawed_blood_V3V5_S1056
+bacterial_plotting3(vaginal.data, 64, "2022-11-16") # F143_blood_V3V5_S943
+bacterial_plotting3(vaginal.data, 64, "2022-10-13") # S1505_V3V5_S1155
 
 ## Plot gut
 gut.data.64 <- prune_samples(sample_data(gut.data)$biome_id == 64, gut.data) 
@@ -678,10 +848,22 @@ bacterial_plotting2(vaginal.data.64)
 
 # Swap swabs
 sample_data(bacterial.data)["S3326_V3V5_S1182", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["F901_thawed_blood_V3V5_S1056", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["F143_blood_V3V5_S943", "sampleType"] <- "fecal"
+sample_data(bacterial.data)["S1505_V3V5_S1155", "sampleType"] <- "fecal"
 sample_data(bacterial.data)["F74_capoff_V3V5_S1673", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["S1509_V3V5_S243", "sampleType"] <- "vaginal"
+sample_data(bacterial.data)["F960_thawed_V3V5_S194", "sampleType"] <- "vaginal"
 
-#### Participant 64
 #### Participant 65
+
+## Plot gut
+gut.data.65 <- prune_samples(sample_data(gut.data)$biome_id == 65, gut.data) 
+bacterial_plotting2(gut.data.65)
+
+## Plot vaginal
+vaginal.data.65 <- prune_samples(sample_data(vaginal.data)$biome_id == 65, vaginal.data)
+bacterial_plotting2(vaginal.data.65)
 
 #### Participant 66
 
@@ -709,21 +891,23 @@ sample_data(bacterial.data)["F1612_V3V5_S99", "sampleType"] <- "vaginal"
 #### Participant 67
 
 bacterial_plotting(gut.data, 67, "2022-10-14") # S2964_V3V5_S752
-bacterial_plotting3(vaginal.data, 67, "2022-12-14") # S9450_thawed_V3V5_S990
 
 ## Plot gut
 gut.data.67 <- prune_samples(sample_data(gut.data)$biome_id == 67, gut.data) 
-bacterial_plotting2(gut.data.67) # 1
+bacterial_plotting2(gut.data.67) 
 
 ## Plot vaginal
 vaginal.data.67 <- prune_samples(sample_data(vaginal.data)$biome_id == 67, vaginal.data)
-bacterial_plotting2(vaginal.data.67) # 1
+bacterial_plotting2(vaginal.data.67) 
 
 # Swap swabs
 sample_data(bacterial.data)["S2964_V3V5_S752", "sampleType"] <- "vaginal"
-sample_data(bacterial.data)["S9450_thawed_V3V5_S990", "sampleType"] <- "fecal"
 
 #### Participant 68
+
+## Plot gut
+gut.data.68 <- prune_samples(sample_data(gut.data)$biome_id == 68, gut.data) 
+bacterial_plotting2(gut.data.68) 
 
 #### Participant 69
 
@@ -732,11 +916,11 @@ bacterial_plotting3(vaginal.data, 69, "2022-11-05") # S6015_thawed_V3V5_S629
 
 ## Plot gut
 gut.data.69 <- prune_samples(sample_data(gut.data)$biome_id == 69, gut.data) 
-bacterial_plotting2(gut.data.69) # 1
+bacterial_plotting2(gut.data.69)
 
 ## Plot vaginal
 vaginal.data.69 <- prune_samples(sample_data(vaginal.data)$biome_id == 69, vaginal.data)
-bacterial_plotting2(vaginal.data.69) # 1
+bacterial_plotting2(vaginal.data.69)
 
 # Swap swabs
 sample_data(bacterial.data)["S6023_V3V5_S1645", "sampleType"] <- "vaginal"
@@ -744,17 +928,25 @@ sample_data(bacterial.data)["S6015_thawed_V3V5_S629", "sampleType"] <- "fecal"
 
 #### Participant 70
 
+## Plot gut
+gut.data.70 <- prune_samples(sample_data(gut.data)$biome_id == 70, gut.data) 
+bacterial_plotting2(gut.data.70)
+
+## Plot vaginal
+vaginal.data.70 <- prune_samples(sample_data(vaginal.data)$biome_id == 70, vaginal.data)
+bacterial_plotting2(vaginal.data.70)
+
 #### Participant 71
 
 bacterial_plotting3(vaginal.data, 71, "2022-10-30") # S353_V3V5_S1124
 
 ## Plot gut
 gut.data.71 <- prune_samples(sample_data(gut.data)$biome_id == 71, gut.data) 
-bacterial_plotting2(gut.data.71) # 
+bacterial_plotting2(gut.data.71)
 
 ## Plot vaginal
 vaginal.data.71 <- prune_samples(sample_data(vaginal.data)$biome_id == 71, vaginal.data)
-bacterial_plotting2(vaginal.data.71) # 1
+bacterial_plotting2(vaginal.data.71)
 
 # Swap swabs
 sample_data(bacterial.data)["S353_V3V5_S1124", "sampleType"] <- "fecal"
@@ -787,17 +979,49 @@ metadata.22.subset <- metadata.22 %>%
   select(qr, sampleType) %>% 
   rename(sampleType_fixed = sampleType)
 
-samples.data <- samples.data %>% 
-  left_join(metadata.22.subset, by="qr")
+samples.data2 <- metadata.22.subset %>% 
+  left_join(samples.data, by="qr")
 
-samples.data <- samples.data %>% 
+samples.data3 <- samples.data2 %>% 
   mutate(sampleType=ifelse(is.na(sampleType), sampleType, sampleType_fixed)) %>% 
   select(!sampleType_fixed) %>% 
   distinct()
 
-dupes <- names(table(samples.data$qr))[table(samples.data$qr) > 1]
+dupes <- names(table(samples.data3$qr))[table(samples.data3$qr) > 1]
 dupes
 
-write.csv(samples.data,
+# filter out blanks
+samples.data4 <- samples.data3 %>% 
+  filter(!is.na(sampleType))
+
+write.csv(samples.data4,
           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv",
           row.names = FALSE)
+
+####################################################################################
+# Relabeled data
+relabeled_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_samplesv2 - relabeled_information.csv")
+
+vaginal0 <- relabeled_data %>% 
+  filter(Vaginal != 0)
+length((unique(vaginal0$Participant)))
+
+fecal0 <- relabeled_data %>% 
+  filter(Fecal != 0)
+length((unique(fecal0$Participant)))
+
+####################################################################################
+# Paired samples - cross site analysis
+
+vag <- vaginal.microbial.menses.24 %>% 
+  select(SampleID, biome_id, logDate)
+fec <- gut.microbial.menses.24 %>% 
+  select(SampleID, biome_id, logDate) %>% 
+  rename(SampleID_fec=SampleID)
+
+both.days <- vag %>% 
+  left_join(fec, by=c("biome_id", "logDate"))
+dim(both.days)
+both.days.filter <- both.days %>% 
+  filter(!is.na(SampleID_fec))
+dim(both.days.filter)

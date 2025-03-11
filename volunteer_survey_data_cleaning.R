@@ -190,6 +190,10 @@ history_data_subset$birthControl[history_data_subset$birthControl=="Hormonal int
 unique(history_data_subset$birthControl) # Orilissa (Elagolix) is nonhormonal
 
 ## Organize sport to be "off-season", "in-season", or "no sport" 
+
+history_data_subset <- history_data_subset %>% 
+  mutate(field_hockey = ifelse(grepl("field hockey", history_data_subset$sport, ignore.case = TRUE), TRUE, FALSE))
+
 history_data_subset$sport[grepl("frisbee", history_data_subset$sport, ignore.case = TRUE)] <- "Ultimate Frisbee"
 history_data_subset$sport[grepl("climbing", history_data_subset$sport, ignore.case = TRUE) |
                             grepl("squash", history_data_subset$sport, ignore.case = TRUE) | 

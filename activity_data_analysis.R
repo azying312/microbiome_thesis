@@ -91,6 +91,38 @@ summary(lm.shannon.activity)
 lm.shannon.activity <- lm(avg_shannon ~ avg_minues_very_active, data = activity.data.summary)
 summary(lm.shannon.activity)
 
+##########################################################################################
+
+## Mixed Effects Model
+library(lme4)
+library(lmerTest)
+
+activity.data.shannon.filtered <- activity.data.shannon %>% 
+  group_by(biome_id) %>% 
+  filter(n() > 10)
+table(activity.data.shannon.filtered$biome_id)
+
+## Different baseline, same slope, different intercept
+
+source("~/Microbiome Thesis/functions.R")
+
+fixed_list <- c("steps", "distance", "calories_burned", "minutes_sedentary", "minutes_lightly_active",
+                "minutes_fairly_active", "minues_very_active", "activity_calories")
+
+lmer.models <- mixed_effects_fixed_slope(activity.data.shannon, 10, "shannon", fixed_list)
+
+summary(lmer.models$steps)
+summary(lmer.models$distance)
+summary(lmer.models$calories_burned)
+summary(lmer.models$minutes_sedentary)
+summary(lmer.models$minutes_lightly_active)
+summary(lmer.models$minutes_fairly_active)
+summary(lmer.models$minues_very_active)
+summary(lmer.models$activity_calories)
+
+rs_lmer.models <- mixed_effects_fixed_slope(activity.data.shannon, 10, "shannon", fixed_list)
+summary(rs_lmer.models$steps)
+
 
 ##########################################################################################
 
@@ -100,7 +132,7 @@ participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_R
 participant.data <- participant.data %>% 
   mutate(sport_collapsed = ifelse(sport=="In-Season", sport, "Not In-Season")) %>%
   # mutate(sport_collapsed = ifelse(sport=="In-Season" | sport == "Club", "Activly in Sport", "Not In-Season")) %>%
-  select(biome_id, logDate, activity_level, sport, sport_collapsed)
+  select(biome_id, logDate, activity_level, sport, sport_collapsed, field_hockey)
 
 activity.sport.summary <- activity.data.summary %>% 
   left_join(participant.data, by="biome_id") %>% 
@@ -139,6 +171,18 @@ wilcox.test(avg_shannon ~ sport_collapsed, data = activity.sport.summary)
 ### Minutes active 
 lm.shannon.activity <- lm(avg_shannon ~ total_min_active, data = activity.data.summary)
 summary(lm.shannon.activity)
+
+## field hockey team
+ggplot(activity.sport.summary, aes(x = field_hockey, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
 
 ##########################################################################################
 
@@ -203,4 +247,30 @@ ggplot(activity.data.summary.subset, aes(x = factor(activity_level), y = avg_sha
 ### Minutes active 
 lm.shannon.activity <- lm(avg_shannon ~ total_min_active, data = activity.data.summary.subset)
 summary(lm.shannon.activity)
+
+##########################################################################################
+
+## mixed effects models
+activity.sport.participant <- activity.data.shannon %>% 
+  left_join(participant.data, by="biome_id") %>% 
+  filter(!is.na(sport))
+
+fixed_list <- c("steps*field_hockey", "distance*field_hockey", "calories_burned*field_hockey", 
+                "minutes_sedentary*field_hockey", "minutes_lightly_active*field_hockey",
+                "minutes_fairly_active*field_hockey", "minues_very_active*field_hockey", "activity_calories*field_hockey")
+
+lmer.models <- mixed_effects_fixed_slope(activity.sport.participant, 10, "shannon", fixed_list)
+
+summary(lmer.models$`steps*field_hockey`)
+summary(lmer.models$`distance*field_hockey`)
+summary(lmer.models$`calories_burned*field_hockey`)
+summary(lmer.models$`minutes_sedentary*field_hockey`)
+summary(lmer.models$`minutes_lightly_active*field_hockey`)
+summary(lmer.models$`minutes_fairly_active*field_hockey`)
+summary(lmer.models$`minues_very_active*field_hockey`)
+summary(lmer.models$`activity_calories*field_hockey`)
+
+##########################################################################################
+
+head(activity.data.shannon)
 

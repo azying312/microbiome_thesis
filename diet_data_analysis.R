@@ -345,6 +345,7 @@ ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = dietFib_prop)) +
 ### Mixed Effects Models
 library(lme4)
 library(lmerTest)
+library(performance)
 
 # Shannon diversity and nutrients
 # vaginal microbiota and specific nutrient intake
@@ -381,7 +382,7 @@ table(nutrient.diet.22.day.microbiome.filtered$biome_id)
 nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome.filtered %>% 
   mutate(caloriesall_avg_scale = scale(caloriesall_avg))
 
-lmer.avg.cal <- lmer(shannon~caloriesall_avg_scale+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+lmer.avg.cal <- lmer(shannon~caloriesall_avg+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 lmer.choles  <- lmer(shannon~cholesterol_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
 lmer.satfat  <- lmer(shannon~satFat_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
 lmer.sodium  <- lmer(shannon~sodium_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
@@ -392,6 +393,19 @@ lmer.prot    <- lmer(shannon~protein_prop+(1|`biome_id`),  data=nutrient.diet.22
 lmer.fat     <- lmer(shannon~fat_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 lmer.fat.cal <- lmer(shannon~fat_cal_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 lmer.addsug  <- lmer(shannon~addedSugarall_prop+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+
+r2(lmer.avg.cal)
+r2(lmer.choles ) # 52% of variation explained by which person is which and by the amount of cholesterol
+r2(lmer.satfat )
+r2(lmer.sodium )
+
+r2(lmer.carbs  )
+r2(lmer.dietfib)
+r2(lmer.sugar  )
+r2(lmer.prot   )
+r2(lmer.fat    )
+r2(lmer.fat.cal)
+r2(lmer.addsug )
 
 summary(lmer.avg.cal)
 summary(lmer.choles )
@@ -417,6 +431,18 @@ rs_lmer.prot    <- lmer(shannon~protein_prop+(protein_prop|`biome_id`),  data=nu
 rs_lmer.fat     <- lmer(shannon~fat_prop+(fat_prop|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 rs_lmer.fat.cal <- lmer(shannon~fat_cal_prop+(fat_cal_prop|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 rs_lmer.addsug  <- lmer(shannon~addedSugarall_prop+(addedSugarall_prop||`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
+
+r2(rs_lmer.avg.cal)
+r2(rs_lmer.choles )
+r2(rs_lmer.satfat )
+r2(rs_lmer.sodium )
+r2(rs_lmer.carbs  )
+r2(rs_lmer.dietfib)
+r2(rs_lmer.prot)
+r2(rs_lmer.fat    )
+r2(rs_lmer.sugar  )
+r2(rs_lmer.fat.cal)
+r2(rs_lmer.addsug )
 
 summary(rs_lmer.avg.cal)
 summary(rs_lmer.choles )

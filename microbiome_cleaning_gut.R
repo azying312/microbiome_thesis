@@ -1,15 +1,15 @@
 library(phyloseq)
 library(decontam)
 library(tidyverse)
-library(Matrix)
+# library(Matrix)
 
 # after vaginal_gut_sample_check.R
 bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_cleanedv2.rds")
 samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
 
 # FIRST RUN (NO RELABELING)
-bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+# bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
+# samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 bacteria_physeq_otu <- otu_table(bacteria_physeq)
 bacteria_physeq_tax <- tax_table(bacteria_physeq)
@@ -46,10 +46,10 @@ bacteria_physeq_no_contam <- prune_taxa(!contaminants, bacteria_subset_fecal)
 bacteria_physeq_no_contam <- phyloseq(otu_table(bacteria_physeq_no_contam), bacteria_physeq_meta, tax_table(bacteria_physeq_no_contam))
 
 # Save new obj
-saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_decontam.rds")
+# saveRDS(bacteria_physeq_no_contam, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_decontam.rds")
 
 ## Data Processing
-bacteria_physeq_no_contam <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_decontam.rds")
+# bacteria_physeq_no_contam <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_decontam.rds")
 
 # Filter ASVs w/o Phylum asst
 bacteria_physeq_subset <- subset_taxa(bacteria_physeq_no_contam, !is.na(Phylum) & Phylum != "")
@@ -60,49 +60,49 @@ bacteria_physeq_subset <- subset_taxa(bacteria_physeq_subset, !is.na(Genus) & Ge
 bacteria_physeq_clean <- phyloseq(otu_table(bacteria_physeq_subset), bacteria_physeq_meta, tax_table(bacteria_physeq_subset))
 
 # Save new obj
-saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
+# saveRDS(bacteria_physeq_clean, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
 
 ################################################################################
 
 # SKIP FILTERING
 bacterial.data.filtered <- bacteria_physeq_clean
-
-# Filtering
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
-
-otu.22 <- otu_table(bacterial.data)
-tax.22 <- tax_table(bacterial.data)
-meta.22 <- sample_data(bacterial.data)
-
-# Initial Reads
-total_reads_initial <- sum(otu.22) # 138697737 reads
-
-# number of reads per taxa
-taxa_total_reads <- taxa_sums(bacterial.data)
-taxa_sample_presence <- colSums((otu.22) > 0) # 0 - taxon absent in sample; 1 - taxon in sample -- then sum
-
-## Filter data
-# Identify non-rare taxa to keep (present in at least 3 samples)
-keep_taxa <- (taxa_sample_presence >= 2) # 2 samples
-# keep_taxa <- (taxa_sample_presence >= 3)
-bacterial.data.filtered <- prune_taxa(keep_taxa, bacterial.data)
-
-# Save new obj
-saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filtered.rds")
-
-total_reads_after <- sum(otu_table(bacterial.data.filtered))
-total_reads_after # 138222649 (475088 reads removed)
-
-# Percent removed
-total_reads_initial-total_reads_after # 475088
-100*(total_reads_initial-total_reads_after)/total_reads_initial # 0.343% removed
-
-# Number of taxa removed
-num_taxa_before <- ntaxa(bacterial.data)
-num_taxa_after <- ntaxa(bacterial.data.filtered)
-taxa_removed <- num_taxa_before - num_taxa_after
-taxa_removed # 76222
-100*(taxa_removed)/num_taxa_before # 82.403%
+# 
+# # Filtering
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_cleanedv2.rds")
+# 
+# otu.22 <- otu_table(bacterial.data)
+# tax.22 <- tax_table(bacterial.data)
+# meta.22 <- sample_data(bacterial.data)
+# 
+# # Initial Reads
+# total_reads_initial <- sum(otu.22) # 138697737 reads
+# 
+# # number of reads per taxa
+# taxa_total_reads <- taxa_sums(bacterial.data)
+# taxa_sample_presence <- colSums((otu.22) > 0) # 0 - taxon absent in sample; 1 - taxon in sample -- then sum
+# 
+# ## Filter data
+# # Identify non-rare taxa to keep (present in at least 3 samples)
+# keep_taxa <- (taxa_sample_presence >= 2) # 2 samples
+# # keep_taxa <- (taxa_sample_presence >= 3)
+# bacterial.data.filtered <- prune_taxa(keep_taxa, bacterial.data)
+# 
+# # Save new obj
+# saveRDS(bacterial.data.filtered, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filtered.rds")
+# 
+# total_reads_after <- sum(otu_table(bacterial.data.filtered))
+# total_reads_after # 138222649 (475088 reads removed)
+# 
+# # Percent removed
+# total_reads_initial-total_reads_after # 475088
+# 100*(total_reads_initial-total_reads_after)/total_reads_initial # 0.343% removed
+# 
+# # Number of taxa removed
+# num_taxa_before <- ntaxa(bacterial.data)
+# num_taxa_after <- ntaxa(bacterial.data.filtered)
+# taxa_removed <- num_taxa_before - num_taxa_after
+# taxa_removed # 76222
+# 100*(taxa_removed)/num_taxa_before # 82.403%
 
 ############################################################
 
@@ -142,7 +142,7 @@ total_reads_filtered-total_reads_Species # 50122517 removed
 
 # Save new obj
 # BEFORE RE-LABEL DATA
-saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
+# saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
 
 # NEW LABELED DATA
 saveRDS(bacterial.data_subset, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")

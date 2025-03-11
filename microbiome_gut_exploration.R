@@ -2,7 +2,9 @@ library(tidyverse)
 library(viridis)
 
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
-samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
+# samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
+# RELABELED DATA
+samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
 
 source("~/Microbiome Thesis/functions.R")
 
@@ -41,8 +43,11 @@ uminn_data_subset_unique <- uminn_data_subset %>%
 fecal_samples_data$submitted <- TRUE
 
 # Save fecal data obj
+# write.csv(fecal_samples_data,
+#           file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_fecal_samples_data.csv",
+#           row.names = FALSE)
 write.csv(fecal_samples_data,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/cleaned_fecal_samples_data.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_fecal_samples_data.csv",
           row.names = FALSE)
 
 ####################################################################

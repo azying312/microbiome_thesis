@@ -4,7 +4,9 @@ library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
+# bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
+# RELABELED DATA
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")
 
 ###############################################################################################
 
@@ -16,7 +18,7 @@ bacteria_metadata_df <- sample_data(bacterial.data)
 
 # Relative abundances
 gut_relative_abundances <- transform_sample_counts(bacterial.data, function(x) x/sum(x))
-relative_abundance_otu <- as.data.frame(otu_table(gut_relative_abundances)) # 1418 samples, 1015 OTU
+relative_abundance_otu <- as.data.frame(otu_table(gut_relative_abundances)) # 1418 samples, 1015 OTU | 2015 OTU 1449 samples
 relative_abundance_otu_t <- t(relative_abundance_otu) %>% as.data.frame()
 
 # Add sample ID
@@ -32,7 +34,8 @@ relative_abundance_otu <- relative_abundance_otu %>%
 ###################################################################################################
 
 # Get most abundant OTU per sample
-max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
+# max_taxa <- apply(relative_abundance_otu_t, 2, function(sample) {
+max_taxa <- apply(relative_abundance_otu_t, 1, function(sample) { # on relabeled data
   taxa_idx <- which.max(sample)
   taxa_names(gut_relative_abundances)[taxa_idx]
 })
@@ -46,14 +49,18 @@ bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$m
 ################################################################################
 
 # Aggregate data by participants by mean relative abundance for a given OTU
+# participant_otu <- tapply(sample_names(bacteria_metadata_df),
+#                           sample_data(bacterial.data)$biome_id,
+#                           function(samples) rowMeans(t(otu_table(gut_relative_abundances))[, samples, drop = FALSE]))
 participant_otu <- tapply(sample_names(bacteria_metadata_df),
                           sample_data(bacterial.data)$biome_id,
-                          function(samples) rowMeans(t(otu_table(gut_relative_abundances))[, samples, drop = FALSE]))
+                          function(samples) rowMeans(otu_table(gut_relative_abundances)[, samples, drop = FALSE]))
+
 participant_otu <- do.call(cbind, participant_otu)
 rownames(participant_otu) <- taxa_names(gut_relative_abundances)
 
 ## Alpha Div - Shannon Index
-shannon.24 <- vegan::diversity(otu_table_df, "shannon")
+shannon.24 <- vegan::diversity(t(otu_table_df), "shannon")
 
 # Add participant IDs from sample data | Merge the calculated Shannon diversity values with metadata
 bacteria_metadata_df <- as(bacteria_metadata_df, "data.frame")
@@ -71,7 +78,8 @@ dim(shannon.cst.qr.merged.24)
 
 ### Check UMinn Spreadsheet v. Sequenced Data
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+# samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
 
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes) %>% 
@@ -89,7 +97,8 @@ uminn_data_fecal <- uminn_data %>%
 uminn_data_fecal <- uminn_data_fecal %>% 
   left_join(fecal_data, by="qr")
 
-length(setdiff(shannon.cst.qr.merged.24$qr, uminn_data_fecal$qr)) # 345 - in sequenced data but not in the uminn returned swabs
+# 345 - in sequenced data but not in the uminn returned swabs --> 340
+length(setdiff(shannon.cst.qr.merged.24$qr, uminn_data_fecal$qr)) 
 length(setdiff(uminn_data_fecal$qr, shannon.cst.qr.merged.24$qr)) # 19
 
 diff.qr <- setdiff(shannon.cst.qr.merged.24$qr, uminn_data_fecal$qr)
@@ -97,7 +106,7 @@ diff.qr <- setdiff(shannon.cst.qr.merged.24$qr, uminn_data_fecal$qr)
 setdiff(unique(shannon.cst.qr.merged.24$biome_id), unique(uminn_data_fecal$biome_id)) # 68
 setdiff(unique(uminn_data_fecal$biome_id), unique(shannon.cst.qr.merged.24$biome_id))
 
-write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/gut_shannon.cst.qr.merged.24.csv")
+write.csv(shannon.cst.qr.merged.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut_shannon.cst.qr.merged.24.csv")
 
 ###############################################################################################
 
@@ -137,8 +146,8 @@ ggplot(top10_relative_df, aes(x = factor(biome_id), y = Relative_Abundance, fill
 
 
 ###############################################################################################
-menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
-
+# menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv")
 menses.data <- menses.data %>% 
   rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
   rename_with(~gsub("\\.", "-", .))
@@ -155,7 +164,7 @@ fecal.microbial.menses.24 <- fecal.microbial.menses.24 %>%
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA))) %>% 
   mutate(menses_day = ifelse(is.na(menses_day), "not_menses", "menses"))
 
-write.csv(fecal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/gut.microbial.menses.24.csv")
+write.csv(fecal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut.microbial.menses.24.csv")
 
 menses.table.df <- fecal.microbial.menses.24 %>% 
   select(biome_id, logDate, shannon, qr, max_taxa, OTU, menses_status, menses_day)
@@ -166,7 +175,8 @@ menses.table.df <- fecal.microbial.menses.24 %>%
 participant_ids <- unique(fecal.microbial.menses.24$biome_id)
 all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
 all_days <- data.frame(logDate=as.character(all_days))
-file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/gut_shannon_diversity_logDates/"
+# file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/gut_shannon_diversity_logDates/"
+file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/relabeled_data/gut_shannon_diversity_logDates/"
 for(id in participant_ids) {
   # print(id)
   file_name_id <- paste0(file_path, id, "_id.png")
@@ -204,7 +214,9 @@ for(id in participant_ids) {
 
 ##########################################################################################
 
-vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
+# vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/vaginal.microbial.menses.24.csv")
+vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
+
 vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>% 
   select(SampleID, shannon, qr, biome_id, logDate, sampleType, timestamp, max_taxa, OTU, survey_menstruate, menses_status, menses_day)
 fecal.microbial.menses.24_subset <- fecal.microbial.menses.24 %>% 
@@ -217,7 +229,9 @@ dim(gut.vaginal.microbial)
 participant_ids <- unique(gut.vaginal.microbial$biome_id)
 all_days <- seq.Date(as.Date("2022-10-13"), as.Date("2022-12-16"), by = "day")
 all_days <- data.frame(logDate=as.character(all_days))
-file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/vaginal_gut_shannon_diversity_logDates_10/"
+# file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/vaginal_gut_shannon_diversity_logDates_10/"
+file_path <- "/Volumes/T7/microbiome_data/graphics/Results from 2022 (compare to 2017-18)/relabeled_data/vaginal_gut_shannon_diversity_logDates_10/"
+
 for(id in participant_ids) {
   # print(id)
   file_name_id <- paste0(file_path, id, "_id.png")
@@ -252,4 +266,4 @@ for(id in participant_ids) {
   
   print(shannon_plt)
 }
-
+ 

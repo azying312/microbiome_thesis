@@ -1,3 +1,10 @@
+########################
+#
+# Menstruation Data Imputation
+# Last updated 03/11
+#
+######################### 
+
 library(tidyverse)
 library(purrr)
 library(zoo)
@@ -55,7 +62,7 @@ if (length(missing_days) > 0) {
 menses_data <- survey_data %>% 
   left_join(collapsed_days, by="biome_id")
 
-## Plot Initial Data
+## Fig 1: Plot Initial Data - data missingness
 # heatmap_plot(menses_data)
 heatmap_plot1(menses_data)
 
@@ -138,11 +145,11 @@ collapsed_days <- full_data %>%
 
 # Menstruation Data
 imputation_data <- survey_data %>% 
-  left_join(collapsed_days, by="biome_id") #%>% 
-  # get only ppl that menstruated throughout study
-  # filter(biome_id %in% participants_to_impute) #%>%
-  # mutate(regular_periods=ifelse(is.na(regular_periods), 0, regular_periods))
+  left_join(collapsed_days, by="biome_id") %>% 
+  # get only ppl that menstruated throughout study -  comment out for full participant mapping
+  filter(biome_id %in% participants_to_impute)
 
+# Fig 6: Heatmap of Biome ID by Date - imputable participants
 heatmap_plot2(imputation_data)
 
 ####################################################################
@@ -161,10 +168,11 @@ dim(regular_cycle_df)
 dim(irregular_cycle_df)
 dim(noinfo_cycle_df)
 
+# Fig 7: Heatmap of Biome ID by Date - regular cycle
 heatmap_plot2(regular_cycle_df)
-
+# Fig 8: Heatmap of Biome ID by Date - irregular cycle
 heatmap_plot2(irregular_cycle_df)
-
+# Fig 9: Heatmap of Biome ID by Date - no reported cycle
 heatmap_plot2(noinfo_cycle_df)
 
 ####################################################################
@@ -191,10 +199,11 @@ irregular_cycle_df <- imputation_data_fecal %>%
 ininfo_cycle_df <- imputation_data_fecal %>% 
   filter(is.na(regular_periods))
 
+# Fig 10: Heatmap of Biome ID by Date regular - with fecal
 heatmap_plot_fecal(regular_cycle_df)
-
+# Fig 11: Heatmap of Biome ID by Date irregular - with fecal
 heatmap_plot_fecal(irregular_cycle_df)
-
+# Fig 12: Heatmap of Biome ID by Date no info - with fecal
 heatmap_plot_fecal(ininfo_cycle_df)
 
 ####################################################################
@@ -207,11 +216,11 @@ heatmap_plot_fecal(ininfo_cycle_df)
 # Regular (self-reported); person 66, 16, 14, 58, 49, 55, 51, 29, 15, 52, 37, 9 can't really impute
 # person 50, 17, 4 no impute needed
 person65_days <- c("2022-10-15", "2022-10-16", "2022-10-18", "2022-10-19", "2022-11-11", "2022-11-14", "2022-11-14", "2022-11-16", "2022-11-17", "2022-11-18")
-person64_days <- c("2022-10-21", "2022-10-23", "2022-11-17", "2022-11-18")
 person60_days <- c("2022-10-20", "2022-10-21", "2022-10-22", "2022-10-23", "2022-11-15", "2022-11-16", "2022-11-17")
-person63_days <- c("2022-10-25")
-person66_days <- c("2022-10-21", "2022-10-22", "2022-10-23")
 person43_days <- c("2022-12-01", "2022-12-02", "2022-12-04", "2022-12-05", "2022-12-06")
+person66_days <- c("2022-10-21", "2022-10-22", "2022-10-23")
+person64_days <- c("2022-10-21", "2022-10-23", "2022-11-17", "2022-11-18")
+person63_days <- c("2022-10-25")
 person38_days <- c("2022-11-02", "2022-11-03", "2022-11-05", "2022-11-06")
 person12_days <- c("2022-10-22")
 person35_days <- c("2022-11-16", "2022-11-18")
@@ -232,7 +241,15 @@ person61_days <- c("2022-10-31")
 person34_days <- c("2022-10-18", "2022-10-20", "2022-10-20", "2022-10-21", "2022-10-22", "2022-10-23", "2022-10-25")
 person32_days <- c("2022-11-12", "2022-11-13")
 
+# No info
+person47_days <- c("2022-11-13")
+person34_days <- c("2022-10-20")
+
 imputation_data_v2 <- imputation_data %>% 
+  mutate(across(all_of(person47_days),
+                ~ ifelse(biome_id==65, 78, .) )) %>% 
+  mutate(across(all_of(person34_days),
+                ~ ifelse(biome_id==65, 78, .) )) %>% 
   mutate(across(all_of(person65_days),
                 ~ ifelse(biome_id==65, 78, .) )) %>% 
   mutate(across(all_of(person64_days),
@@ -278,7 +295,7 @@ imputation_data_v2 <- imputation_data %>%
                 ~ ifelse(biome_id==34, 78, .) )) %>% 
   mutate(across(all_of(person32_days),
                 ~ ifelse(biome_id==32, 78, .) ))
-
+# Fig 13: Heatmap of Biome ID by Date Imputed Data
 heatmap_plot_imputation(imputation_data_v2)
 
 ### Save final data output
@@ -288,5 +305,5 @@ heatmap_plot_imputation(imputation_data_v2)
 
 # Relabeled data
 write.csv(imputation_data_v2,
-          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_2_12.csv",
+          file = "/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_3_11.csv",
           row.names = FALSE)

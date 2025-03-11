@@ -1,7 +1,7 @@
 ########################
 #
 # Menstruation Data Analysis
-# 9 November 2024
+# Last updated 03/11
 #
 ######################### 
 
@@ -12,6 +12,12 @@ full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/c
 # full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
 survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
+length(unique(full_data$logDate))
+full_data_unique_combinations <- full_data %>% 
+  distinct(biome_id, logDate)
+dim(full_data_unique_combinations)
+length(unique(full_data_unique_combinations$logDate))
+
 survey_data <- survey_data_full %>% 
   select(biome_id, survey_menstruate) #%>%
   # rename(survey_menstruate=menstruate) # 14 no, 53 yes
@@ -20,7 +26,7 @@ table(survey_data$survey_menstruate)
 ## Q: What proportion of self-reported days had blood; days that are inUminn & in self report
 selfReport_blood <- full_data %>% 
   filter(inSelfReport==TRUE & uMinn_menstruation==1)
-dim(selfReport_blood) # 39 days | 40
+dim(selfReport_blood) # 39 days | 41
 # self reported data
 sum(full_data$inSelfReport==TRUE) # 129
 # self reported data that are menses
@@ -30,6 +36,11 @@ sum((full_data$inSelfReport==TRUE & full_data$menstruation==1), na.rm=TRUE) # 10
 selfReport_samples <- full_data %>% 
   filter(inUminn==TRUE & inSelfReport==TRUE)
 dim(selfReport_samples) # 71  8 | 72 8
+
+## Q: What proportion of self reported have no corresponding samples
+selfReport_noSamples <- full_data %>% 
+  filter(inUminn==FALSE & inSelfReport==TRUE)
+dim(selfReport_noSamples)
 
 ### Agreement we have btw UMinn data & Self Reported (put in a slide)
 ## Q: Do samples for the same day agree on blood/no-blood?
@@ -43,6 +54,12 @@ dim(full_data %>% filter(inSelfReport==TRUE & menstruation==0 & inUminn==TRUE))
 # Q: What number of days self reported menses had samples
 dim(full_data %>% filter(inSelfReport==TRUE & uMinn_menstruation==1 & inUminn==TRUE))
 
+# Q: What number of days samples with blood had no self report
+noSelfReport_samples <- full_data %>%
+  filter(inSelfReport==FALSE & inUminn==TRUE) %>% 
+  distinct()
+table(noSelfReport_samples$menstruation_status)
+
 ## Q: For days we have self report & samples, do they correspond
 selfReport_samples <- full_data %>%
   filter(inSelfReport==TRUE & inUminn==TRUE) 
@@ -50,12 +67,14 @@ dim(selfReport_samples) # 71 with both self report & samples | 72 8
 table(selfReport_samples$menstruation_status)
 table(selfReport_samples$uMinn_menstruation, selfReport_samples$menstruation)
 
-dim(full_data %>% filter(inSelfReport==TRUE)) # 128 in self report
-dim(full_data %>% filter(inUminn==TRUE)) # 1423 in UMinn
+dim(full_data %>% filter(inSelfReport==TRUE)) # 128 | 129 in self report
+dim(full_data %>% filter(inUminn==TRUE)) # 1423 | 1408 in UMinn
 
 ## Q: Days in UMinn with Blood
-dim(full_data %>% filter(inUminn==TRUE & uMinn_menstruation==TRUE))
-# sum(full_data$sampleType=="vaginal", na.rm=TRUE)
+days_uminn_blood <- full_data %>% 
+  filter(inUminn==TRUE & uMinn_menstruation==TRUE) %>% 
+  distinct()
+dim(days_uminn_blood)
 
 # Make menstruation variable
 full_data <- full_data %>% 

@@ -1,19 +1,13 @@
 library(vegan)
 library(pheatmap)
 library(tidyverse)
-library(Matrix)
-
-library(cluster)
-library("igraph")
-library("markovchain")
-library("RColorBrewer")
-library("gridExtra")
-library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
 # RELABELED DATA
 bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_bacteria_cleanedv3.rds")
+fecal.bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")
+
 # bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/vaginal_bacteria_cleanedv3.rds")
 # BLAST of max taxa
 BLAST_taxa <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/max taxa BLAST.csv")
@@ -94,5 +88,54 @@ vaginal_max_taxa <- phyloseq(otu_table(bacterial.data), sample_data(bacterial.da
 
 # RELABELED VERSION
 saveRDS(vaginal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/vaginal_cleaned_max_taxa.rds")
+
+###############################################################################################
+
+## Set fecal/gut data
+
+#### Exploratory Data Analysis
+
+# Relative abundances
+fecal_relative_abundances <- transform_sample_counts(fecal.bacterial.data, function(x) x/sum(x))
+relative_abundance_otu <- as.data.frame(otu_table(fecal_relative_abundances))
+relative_abundance_otu_t <- t(relative_abundance_otu) %>% as.data.frame()
+
+# Add sample ID
+relative_abundance_otu$SampleID <- rownames(relative_abundance_otu)
+bacteria_metadata_df <- sample_data(fecal.bacterial.data)
+bacteria_metadata_df <- bacteria_metadata_df[,-2]
+otu_with_participant <-  relative_abundance_otu %>%
+  left_join(bacteria_metadata_df, by="SampleID")
+rownames(otu_with_participant) <- otu_with_participant$SampleID
+relative_abundance_otu <- relative_abundance_otu %>% 
+  select(!SampleID)
+
+max_taxa <- apply(relative_abundance_otu_t, 1, function(sample) {
+  taxa_idx <- which.max(sample)
+  taxa_names(fecal.bacterial.data)[taxa_idx]
+})
+
+# Map most abundant OTU to the sample data
+bacteria_metadata_df$max_taxa <- max_taxa
+
+bacteria_taxa_table <- tax_table(fecal.bacterial.data)
+bacteria_taxa_df <- as.data.frame(bacteria_taxa_table)
+
+# Set taxa to taxa from BLAST
+tax.22 <- bacteria_taxa_df %>% 
+  mutate(OTU_name=rownames(bacteria_taxa_df))
+tax.22 <- tax.22 %>% 
+  left_join(BLAST_taxa, by=c("OTU_name", "sequence"))
+tax.22 <- tax.22 %>% 
+  mutate(BLAST_species = ifelse(is.na(BLAST_species), Species_exact, BLAST_species))
+rownames(tax.22) <- taxa_names(fecal.bacterial.data)
+tax.22 <- tax.22 %>% 
+  select(-OTU_name)
+tax_table(fecal.bacterial.data) <- as.matrix(tax.22)
+
+fecal_max_taxa <- phyloseq(otu_table(fecal.bacterial.data), sample_data(fecal.bacterial.data), tax_table(fecal.bacterial.data))
+
+# Save new obj
+saveRDS(fecal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_cleaned_max_taxa.rds")
 
 
