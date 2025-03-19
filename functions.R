@@ -57,6 +57,20 @@ filter_days <- function(data){
   data
 }
 
+#' add study days
+#'
+#' @param data input # needs logDate variable
+#' @param mapping input
+#' 
+#' @export
+study_days <- function(data){
+  data <- data %>% 
+    mutate(Date=as.Date(logDate, format = "%Y-%m-%d"),
+           study_day = as.numeric(Date - min(Date, na.rm = TRUE)) + 1)
+  # return data
+  data
+}
+
 #' menstruation heat map plot
 #'
 #' @param data input

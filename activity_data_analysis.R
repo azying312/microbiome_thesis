@@ -1,9 +1,20 @@
+########################
+#
+# Exploration of the Activity Data
+# Last updated: 03/18/2025
+#
+#########################
+
 library(tidyverse)
 
-activity.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
+source("functions.R")
 
+activity.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
 activity.data <- activity.data %>% 
   filter(!is.na(as.numeric(biome_id)))
+activity.data <- study_days(activity.data)
+
+##########################################################################################
 
 # distribution of steps
 ggplot(activity.data, aes(x=factor(biome_id), y=steps, fill="orchid")) +
@@ -46,7 +57,7 @@ activity.data.shannon <- vaginal.microbial.menses.24 %>%
 # lm.shannon.activity <- lm(shannon ~ minues_very_active, data = activity.data.shannon)
 # summary(lm.shannon.activity)
 
-### Summary of activity data
+### Summarize activity data
 activity.data.summary <- activity.data %>% 
   group_by(biome_id) %>% 
   summarise(avg_cals_burned = sum(calories_burned) / n(),
@@ -111,6 +122,15 @@ fixed_list <- c("steps", "distance", "calories_burned", "minutes_sedentary", "mi
 
 lmer.models <- mixed_effects_fixed_slope(activity.data.shannon, 10, "shannon", fixed_list)
 
+r2(lmer.models$steps)
+r2(lmer.models$distance)
+r2(lmer.models$calories_burned)
+r2(lmer.models$minutes_sedentary)
+r2(lmer.models$minutes_lightly_active)
+r2(lmer.models$minutes_fairly_active)
+r2(lmer.models$minues_very_active)
+r2(lmer.models$activity_calories)
+
 summary(lmer.models$steps)
 summary(lmer.models$distance)
 summary(lmer.models$calories_burned)
@@ -120,9 +140,71 @@ summary(lmer.models$minutes_fairly_active)
 summary(lmer.models$minues_very_active)
 summary(lmer.models$activity_calories)
 
-rs_lmer.models <- mixed_effects_fixed_slope(activity.data.shannon, 10, "shannon", fixed_list)
-summary(rs_lmer.models$steps)
+## random intercepts, random slops
+rnd.slope.lmer.models <- mixed_effects_rnd_slope(activity.data.shannon, 10, "shannon", fixed_list)
 
+# r2(rnd.slope.lmer.models$steps)
+r2(rnd.slope.lmer.models$distance)
+r2(rnd.slope.lmer.models$calories_burned)
+r2(rnd.slope.lmer.models$minutes_sedentary)
+r2(rnd.slope.lmer.models$minutes_lightly_active)
+r2(rnd.slope.lmer.models$minutes_fairly_active)
+r2(rnd.slope.lmer.models$minues_very_active)
+r2(rnd.slope.lmer.models$activity_calories)
+
+summary(rnd.slope.lmer.models$steps)
+summary(rnd.slope.lmer.models$distance)
+summary(rnd.slope.lmer.models$calories_burned)
+summary(rnd.slope.lmer.models$minutes_sedentary)
+summary(rnd.slope.lmer.models$minutes_lightly_active)
+summary(rnd.slope.lmer.models$minutes_fairly_active)
+summary(rnd.slope.lmer.models$minues_very_active)
+summary(rnd.slope.lmer.models$activity_calories)
+
+# full model - fixed slopes, rnd intercepts
+lmer.full <- lmer(shannon~steps + distance +
+                  calories_burned + minutes_sedentary + minutes_lightly_active +
+                    minutes_fairly_active + minues_very_active + activity_calories +
+                    (1|`biome_id`), 
+                  data = activity.data.shannon)
+r2(lmer.full)
+
+# full model - random slopes, rnd intercepts
+rnd.slope.lmer.full <- lmer(shannon~ steps + (steps||`biome_id`) + 
+                              distance + (distance||`biome_id`) +
+                    calories_burned + (calories_burned||`biome_id`) +
+                      minutes_sedentary + (minutes_sedentary||`biome_id`) +
+                      minutes_lightly_active + (minutes_lightly_active||`biome_id`) +
+                    minutes_fairly_active + (minutes_fairly_active||`biome_id`) +
+                      minues_very_active + (minues_very_active||`biome_id`) +
+                      activity_calories + (activity_calories||`biome_id`),
+                  data = activity.data.shannon)
+r2(rnd.slope.lmer.full)
+
+anova(lmer.full, rnd.slope.lmer.full)
+
+##########################################################################################
+
+## Time
+activity.time.model <- lmer(shannon ~ study_day + steps +
+                               distance + calories_burned + minutes_sedentary +
+                               minutes_lightly_active + minutes_fairly_active +
+                               minues_very_active + activity_calories +
+                               + (1 | biome_id),
+                             data = activity.data.shannon)
+r2(activity.time.model)
+anova(lmer.full, activity.time.model)
+
+## Time and Time^2
+activity.time2.model <- lmer(shannon ~ study_day + I(study_day^2) + steps +
+                              distance + calories_burned + minutes_sedentary +
+                              minutes_lightly_active + minutes_fairly_active +
+                              minues_very_active + activity_calories +
+                              + (1 | biome_id),
+                            data = activity.data.shannon)
+r2(activity.time2.model)
+anova(activity.time.model, activity.time2.model)
+anova(lmer.full, activity.time2.model)
 
 ##########################################################################################
 
@@ -173,7 +255,12 @@ lm.shannon.activity <- lm(avg_shannon ~ total_min_active, data = activity.data.s
 summary(lm.shannon.activity)
 
 ## field hockey team
-ggplot(activity.sport.summary, aes(x = field_hockey, y = avg_shannon)) +
+activity.sport.summary2 <- activity.sport.summary %>% 
+  mutate(field_hockey=ifelse(field_hockey==TRUE, "fieldHockey", 
+                             ifelse(sport_collapsed=="In-Season",
+                                    "In-Season", "Off-Season")))
+
+ggplot(activity.sport.summary2, aes(x = field_hockey, y = avg_shannon)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
   labs(
@@ -183,6 +270,9 @@ ggplot(activity.sport.summary, aes(x = field_hockey, y = avg_shannon)) +
   ) +
   theme_minimal() +
   theme(legend.position = "none") 
+
+t.test(avg_shannon ~ field_hockey, data=activity.sport.summary)
+wilcox.test(avg_shannon ~ field_hockey, data = activity.sport.summary)
 
 ##########################################################################################
 
@@ -221,7 +311,7 @@ aov_sport <- aov(avg_shannon ~ exercise_level, data = activity.data.summary.leve
 summary(aov_sport)
 
 ##########################################################################################
-
+# Investigate intense exercise (greater than 2)
 participant.data.subset <- participant.data %>% 
   filter(activity_level > 2)
 

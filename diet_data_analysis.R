@@ -1,9 +1,11 @@
 ########################
 #
 # Exploration of the Merged Diet Data
-# 11 September 2024
+# Last updated: 03/18/2025
 #
 #########################
+
+source("~/Microbiome Thesis/functions.R")
 
 ## Packages
 packs <- c("tidyverse")
@@ -278,23 +280,28 @@ ggplot(veg_perc_df, aes(x = shannon, y = perc_veg)) +
   theme_minimal()
 
 # Diet: scatter plot of percent vegetarian on average shannon diversity
-ggplot(veg_perc_df_summary, aes(x = avg_shannon, y = perc_veg)) +
+ggplot(shannon.birthControl.collapsed.diet, aes(x = perc_veg, y = avg_shannon)) +
   geom_point() +
-  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
-       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  labs(x = "Percent Vegetarian", y = "Average Shannon Diversity", 
+       title = "Scatter Plot of Average Shannon Diversity v. Percent Vegetarian") +
   theme_minimal()
 
 # Diet: scatter plot of percent vegetarian on average shannon diversity colored by Birth control
-ggplot(shannon.birthControl.collapsed.diet, aes(x = avg_shannon, y = perc_veg, color=birthControl)) +
+shannon.birthControl.collapsed.diet %>%
+  filter(!is.na(birthControl)) %>% 
+  ggplot(aes(x = perc_veg, y = avg_shannon, color=birthControl)) +
   geom_point() +
-  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
-       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  labs(x = "Percent Vegetarian", y = "Average Shannon Diversity", 
+       title = "Scatter Plot of Average Shannon Diversity v. Percent Vegetarian") +
   theme_minimal()
 
-ggplot(shannon.birthControl.collapsed.diet, aes(x = avg_shannon, y = perc_veg, color=birthControl_collapsed)) +
+# Diet: scatter plot of percent vegetarian on average shannon diversity colored by collapsed Birth control
+shannon.birthControl.collapsed.diet %>%
+  filter(!is.na(birthControl_collapsed)) %>% 
+  ggplot(aes(x = perc_veg, y = avg_shannon, color=birthControl_collapsed)) +
   geom_point() +
-  labs(x = "Average Shannon Diversity", y = "Percent Vegetarian", 
-       title = "Scatter Plot of Percent Vegetarian vs. Shannon Diversity") +
+  labs(x = "Percent Vegetarian", y = "Average Shannon Diversity", 
+       title = "Scatter Plot of Average Shannon Diversity v. Percent Vegetarian") +
   theme_minimal()
 
 ##########################################################################################
@@ -344,6 +351,10 @@ ggplot(nutrient.diet.22.microbiome, aes(x = satFat_prop, y = avg_shannon)) +
   geom_smooth(method = "lm", col = "blue", se=FALSE) +
   labs(title = "", x = "Saturated Fat (Proportion of Total Calories)", y = "Average Shannon Diversity") +
   theme_minimal()
+
+
+##########################################################################################
+# Regression analysis
 
 # Diet nutrients: pairwise plots for correlation between nutrients
 macronutrients <- nutrient.diet.22.microbiome %>% 
@@ -474,14 +485,14 @@ summary(lmer.addsug )
 
 # Full model (no avg cal)
 rs_full_model <- lmer(shannon~cholesterol_prop+(cholesterol_prop|`biome_id`)+
-                        # satFat_prop+(satFat_prop|`biome_id`)+
-                        # sodium_prop+(sodium_prop||`biome_id`)+
+                        satFat_prop+#(satFat_prop|`biome_id`)+
+                        # sodium_prop+ # (sodium_prop||`biome_id`)+
                         carb_prop+(carb_prop|`biome_id`)+
-                        # dietFib_prop+(dietFib_prop|`biome_id`)+
-                        # sugar_prop+(sugar_prop|`biome_id`)+
-                        # protein_prop+(protein_prop|`biome_id`)+
-                        # fat_cal_prop+(fat_cal_prop|`biome_id`)+
-                        # addedSugarall_prop+(addedSugarall_prop||`biome_id`)+
+                        # dietFib_prop+ #(dietFib_prop|`biome_id`)+
+                        sugar_prop+ #(sugar_prop|`biome_id`)+
+                        # protein_prop + #(protein_prop|`biome_id`)+
+                        # fat_cal_prop + #(fat_cal_prop|`biome_id`)+
+                        # addedSugarall_prop+ #(addedSugarall_prop||`biome_id`)+
                         fat_prop+(fat_prop|`biome_id`)
                       ,  data=nutrient.diet.22.day.microbiome.filtered)
 r2(rs_full_model)
@@ -523,7 +534,7 @@ summary(rs_lmer.fat    )
 summary(rs_lmer.fat.cal)
 summary(rs_lmer.addsug )
 
-anova(lmer.avg.cal, rs_lmer.avg.cal)
+# anova(lmer.avg.cal, rs_lmer.avg.cal)
 anova(lmer.choles, rs_lmer.choles)
 anova(lmer.satfat, rs_lmer.satfat)
 anova(lmer.sodium, rs_lmer.sodium)
@@ -535,5 +546,38 @@ anova(lmer.fat, rs_lmer.fat)
 anova(lmer.fat.cal, rs_lmer.fat.cal)
 anova(lmer.addsug, rs_lmer.addsug)
 
+##########################################################################################
 
+## Add time into model
+nutrient.diet <- study_days(nutrient.diet.22.day.microbiome.filtered)
 
+# Full model (no avg cal) - fixed slopes
+lmer.full <- lmer(shannon~cholesterol_prop +
+                    satFat_prop + sodium_prop + carb_prop +
+                    dietFib_prop + sugar_prop + protein_prop +
+                    fat_prop + addedSugarall_prop +
+                    (1|`biome_id`), 
+                  data = nutrient.diet)
+r2(lmer.full)
+
+## Time
+nutrients.time.model <- lmer(shannon ~ study_day + cholesterol_prop +
+                               satFat_prop + sodium_prop + carb_prop +
+                               dietFib_prop + sugar_prop + protein_prop +
+                               fat_prop + addedSugarall_prop +
+                               + (1 | biome_id),
+                             data = nutrient.diet)
+r2(nutrients.time.model)
+anova(lmer.full, nutrients.time.model)
+
+## Time and Time^2
+nutrients.time.model2 <- lmer(shannon ~ study_day + I(study_day^2) + cholesterol_prop +
+                                satFat_prop + sodium_prop + carb_prop +
+                                dietFib_prop + sugar_prop + protein_prop +
+                               fat_prop + addedSugarall_prop +
+                              + (1 | biome_id),
+                              data = nutrient.diet)
+r2(nutrients.time.model2)
+summary(nutrients.time.model2)
+
+anova(lmer.full, nutrients.time.model2)

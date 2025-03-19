@@ -1,6 +1,12 @@
-
+########################
+#
+# Exploration of the DASS Data
+# Last updated: 03/18/2025
 # data saved from microbiome_vaginal_analysis.R
+#
+#########################
 
+source("~/Microbiome Thesis/functions.R")
 library(tidyverse)
 
 # RELABELED DATA
@@ -40,6 +46,7 @@ shannon.birthControl <- shannon.cst.qr.merged.24 %>%
 shannon.birthControl <- shannon.birthControl %>% 
   group_by(biome_id) %>% 
   mutate(avg_shannon=sum(shannon)/n())
+
 
 # Collapse by person (assign to most frequent CST)
 shannon.birthControl.collapsed <- shannon.birthControl %>%
@@ -378,8 +385,7 @@ ggplot(dass.participant.collapsed, aes(x = birthControl, y = avg_shannon)) +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
 
 # Regress shannon diversity on stress + stress*birth control, if interaction terms (2) is significant
-# dass.participant.binary <- dass.participant %>% 
-#   mutate(birthControl.binary)
+
 dass.participant.collapsed <- dass.participant.collapsed %>% 
   mutate(birthControl_collapsed=ifelse(birthControl=="Systemic Combined (E&P)" | (birthControl=="Systemic P only"), "Systemic", 
                                        birthControl)) %>% 
@@ -400,6 +406,120 @@ aov.obj <- aov(dass.participant.collapsed$avg_shannon ~ dass.participant.collaps
 summary(aov.obj)
 
 ########################################################
+
+# Get weeks for the bacterial data
+shannon.birthControl$Timestamp <- as.Date(shannon.birthControl$logDate, format="%Y-%m-%d", tz="UTC")
+id_values <- unique(shannon.birthControl$biome_id) 
+time_values <- sort(unique(shannon.birthControl$Timestamp))
+num_time_values <- as.numeric(time_values)
+shannon.birthControl <- shannon.birthControl[order(shannon.birthControl$Timestamp),]
+
+#Remove any values that occurred after 12/16 (end of semester)
+dim(shannon.birthControl)
+shannon.birthControl <- shannon.birthControl[shannon.birthControl$Timestamp<= 19342, ]
+dim(shannon.birthControl)
+
+shannon.birthControl$week <- rep(NA, nrow(shannon.birthControl))
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19276 & shannon.birthControl$Timestamp <= 19280] <- 1
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19281 & shannon.birthControl$Timestamp <= 19286] <- 2
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19290 & shannon.birthControl$Timestamp <= 19293] <- 3
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19296 & shannon.birthControl$Timestamp <= 19300] <- 4
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19302 & shannon.birthControl$Timestamp <= 19308] <- 5
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19312 & shannon.birthControl$Timestamp <= 19315] <- 6
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19319 & shannon.birthControl$Timestamp <= 19321] <- 7
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19323 & shannon.birthControl$Timestamp <= 19329] <- 8
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19330 & shannon.birthControl$Timestamp <= 19336] <- 9
+shannon.birthControl$week[shannon.birthControl$Timestamp >= 19339] <- 10
+table(shannon.birthControl$week)
+
+shannon.birthControl <- shannon.birthControl %>% 
+  select(!Timestamp)
+dass <- dass %>% 
+  select(!biome_id) %>% 
+  rename(biome_id=study_id)
+
+# Collapse shannon.birthControl by week
+shannon.birthControl.collapsed <- shannon.birthControl %>% 
+  group_by(biome_id, week) %>% 
+  summarise(avg_shannon = sum(shannon)/n(),
+            sampleType=first(sampleType))
+
+dass$biome_id <- as.integer(dass$biome_id)
+dass.shannon <- dass %>% 
+  left_join(shannon.birthControl.collapsed, by=c("biome_id", "week"))
+
+# Mixed effects models
+library(lme4)
+library(lmerTest)
+library(performance)
+
+# Full model - fixed slopes
+lmer.full <- lmer(avg_shannon~depression_score + anxiety_score + stress_score + 
+                    windDown + mouthDry + noPositiveFeeling + difficultyBreathing +
+                    initiative + overreact + trembling + nervous + panicSituation +
+                    noLookForward + agitated + difficultyRelax + downhearted +
+                    intolerant + closeToPanic + noEnthusiasm + feelWorthless +
+                    touchy + awareHeart + scared + lifeMeaningless +
+                    (1|`biome_id`), 
+                  data = dass.shannon)
+r2(lmer.full)
+
+# Full model w time - fixed slopes
+lmer.time.full <- lmer(avg_shannon~week+depression_score + anxiety_score + stress_score + 
+                    windDown + mouthDry + noPositiveFeeling + difficultyBreathing +
+                    initiative + overreact + trembling + nervous + panicSituation +
+                    noLookForward + agitated + difficultyRelax + downhearted +
+                    intolerant + closeToPanic + noEnthusiasm + feelWorthless +
+                    touchy + awareHeart + scared + lifeMeaningless +
+                    (1|`biome_id`), 
+                  data = dass.shannon)
+r2(lmer.time.full)
+
+anova(lmer.full, lmer.time.full)
+
+# Full model w time - fixed slopes
+lmer.time2.full <- lmer(avg_shannon~week+I(week^2)+depression_score + anxiety_score + stress_score + 
+                         windDown + mouthDry + noPositiveFeeling + difficultyBreathing +
+                         initiative + overreact + trembling + nervous + panicSituation +
+                         noLookForward + agitated + difficultyRelax + downhearted +
+                         intolerant + closeToPanic + noEnthusiasm + feelWorthless +
+                         touchy + awareHeart + scared + lifeMeaningless +
+                         (1|`biome_id`), 
+                       data = dass.shannon)
+r2(lmer.time2.full)
+
+anova(lmer.time.full, lmer.time2.full)
+
+# full model - random slopes, rnd intercepts - doesn't converge
+# rnd.slope.lmer.full <- lmer(avg_shannon~depression_score + (depression_score|`biome_id`) +
+#                               anxiety_score + (anxiety_score|`biome_id`) +
+#                               stress_score + (stress_score|`biome_id`) +
+#                               windDown + (windDown|`biome_id`) +
+#                               mouthDry + (mouthDry|`biome_id`) +
+#                               noPositiveFeeling + (noPositiveFeeling|`biome_id`) +
+#                               difficultyBreathing + (difficultyBreathing|`biome_id`) +
+#                               initiative + (initiative|`biome_id`) +
+#                               overreact + (overreact|`biome_id`) +
+#                               trembling + (trembling|`biome_id`) +
+#                               nervous + (nervous|`biome_id`) +
+#                               panicSituation + (panicSituation|`biome_id`) +
+#                               noLookForward + (noLookForward|`biome_id`) +
+#                               agitated + (agitated|`biome_id`) +
+#                               difficultyRelax + (difficultyRelax|`biome_id`) +
+#                               downhearted + (downhearted|`biome_id`) +
+#                               intolerant + (intolerant|`biome_id`) +
+#                               closeToPanic + (closeToPanic|`biome_id`) +
+#                               noEnthusiasm + (noEnthusiasm|`biome_id`) +
+#                               feelWorthless + (feelWorthless|`biome_id`) +
+#                               touchy + (touchy|`biome_id`) +
+#                               awareHeart + (awareHeart|`biome_id`) +
+#                               scared + (scared|`biome_id`) +
+#                               lifeMeaningless + (lifeMeaningless|`biome_id`) +
+#                               (1|`biome_id`), 
+#                             data = dass.shannon)
+# r2(rnd.slope.lmer.full) 
+
+########################################################
 ## Corr with menstruation
 participant.dass <- merge(participant.data, dass.avg, by = "biome_id")
 participant.dass <- participant.dass %>% 
@@ -414,20 +534,6 @@ participant.dass$logDate <- as.Date(participant.dass$logDate)
 participant.dass[which(is.na(participant.dass$survey_menstruate)),]$survey_menstruate <- 1
 participant.dass <- participant.dass %>% 
   filter(biome_id!="31")
-
-
-
-# lm.results <- participant.dass %>%
-#   group_by(survey_menstruate) %>%
-#   summarise(
-#     model = list(lm(shannon ~ logDate, data = cur_data())),
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     slope = sapply(model, function(m) coef(m)["logDate"]),
-#     p_value = sapply(model, function(m) summary(m)$coefficients["logDate", "Pr(>|t|)"])
-#   ) %>%
-#   select(survey_menstruate, slope, p_value)
 
 ggplot(participant.dass, aes(x = logDate, y = shannon)) +
   geom_point(aes(color=as.factor(survey_menstruate))) +
@@ -459,3 +565,5 @@ ggplot(participant.dass.collapsed, aes(x = as.factor(survey_menstruate), y = avg
 # theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
 
 t.test(participant.dass.collapsed$avg_shannon ~ participant.dass.collapsed$survey_menstruate)
+
+
