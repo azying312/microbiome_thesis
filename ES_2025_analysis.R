@@ -47,7 +47,6 @@ shannon.birthControl <- shannon.birthControl %>%
   group_by(biome_id) %>% 
   mutate(avg_shannon=sum(shannon)/n())
 
-
 # Collapse by person (assign to most frequent CST)
 shannon.birthControl.collapsed <- shannon.birthControl %>%
   group_by(biome_id) %>% 

@@ -1,15 +1,6 @@
 library(vegan)
-# library(pheatmap)
 library(phyloseq)
 library(tidyverse)
-# library(Matrix)
-# 
-# library(cluster)
-# library("igraph")
-# library("markovchain")
-# library("RColorBrewer")
-# library("gridExtra")
-# library(viridis)
 
 source("~/Microbiome Thesis/functions.R")
 
@@ -337,9 +328,9 @@ for(id in participant_ids) {
   print(shannon_plt)
 }
 
-####
+##########################################################################################
 
-# Plot of average shannon for each participant on menses vs. not on menses
+# Figure: plot of average shannon for each participant on menses vs. not on menses
 vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>% 
   group_by(biome_id, menses_day) %>% 
   summarise(avg_shannon=mean(shannon), .groups="drop") %>% 
@@ -347,23 +338,24 @@ vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>%
   filter(!is.na(menses_day_not_menses) & !is.na(menses_day_menses)) %>% 
   select(!menses_day_NA)
 
-### Wilcox
+### Wilcox test
 wilcox.test(vaginal.microbial.menses.24.summary$menses_day_not_menses,
             vaginal.microbial.menses.24.summary$menses_day_menses, paired=TRUE)
 t.test(vaginal.microbial.menses.24.summary$menses_day_not_menses,
        vaginal.microbial.menses.24.summary$menses_day_menses, paired=TRUE)
 
-
-# plot(vaginal.microbial.menses.24.summary$menses_day_menses, vaginal.microbial.menses.24.summary$menses_day_not_menses)
-
-ggplot(vaginal.microbial.menses.24.summary, aes(x=menses_day_not_menses, y=menses_day_menses)) +
+# Figure: Average Shannon Diversity for Participants on menses v. not
+ggplot(
+  vaginal.microbial.menses.24.summary,
+  aes(x = menses_day_not_menses, y = menses_day_menses,
+      color=as.factor(biome_id))) +
   geom_point() +
   xlim(0,3)+
   ylim(0,3)+
   geom_abline(slope=1, intercept=0, linetype="dashed") +
   theme_minimal() +
   labs(x="Not Menses (Shannon)", y="Menses (Shannon)",
-       title="Average Shannon Diversity for Participants")
+       color="Participant ID")
 
 ##########################################################################################
 
@@ -410,47 +402,87 @@ length(unique(long_term_transitions$biome_id))
 
 ##########################################################################################
 
-# XXX
+## Analyze Lactobacillus abundance throughout study
+
+# bacteria_otu_table <- as.data.frame(otu_table(bacterial.data))
+# bacteria_taxa_table <- as.data.frame(tax_table(bacterial.data))
+# otu_taxa_table <- cbind(bacteria_otu_table, bacteria_taxa_table)
+# # get Lactobacillus abundances
+# lactobacillus_df <- otu_taxa_table %>% filter(Genus == "Lactobacillus")
+# relative abundance
+# lactobacillus_df_ra <- sweep(lactobacillus_df[, 1:ncol(bacteria_otu_table)], 2, colSums(bacteria_otu_table), FUN = "/")
+
+bacterial_ra <- transform_sample_counts(bacterial.data, function(x) x / sum(x))  
+lactobacillus_phyloseq <- subset_taxa(bacterial_ra, Genus %in% c("Lactobacillus"))
+lactobacillus_df_ra <- psmelt(lactobacillus_phyloseq)
+
+lactobacillus_df_ra_subset <- lactobacillus_df_ra %>% 
+  rename(LactobacillusRelativeAbundance=Abundance) %>% 
+  select(c(SampleID, LactobacillusRelativeAbundance, biome_id, Kingdom, Phylum, Class, Order, Family, Genus, Species, Species_exact))
+
+# Merge with sample metadata
+meta_df <- as.data.frame(sample_data(bacterial.data))
+lactobacillus_df <- left_join(lactobacillus_df_ra_subset, meta_df, by = c("SampleID", "biome_id"))
+lactobacillus_df <- study_days(lactobacillus_df)
+
+# Figure: Logged Relative Abundance of Lactobacillus Abundance Over Time
+ggplot(lactobacillus_df, aes(x = as.numeric(study_day), y = LactobacillusRelativeAbundance, group=biome_id, color=as.factor(biome_id))) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, size = 0.5) +  
+  # geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "orchid") +
+  scale_y_log10() +
+  scale_x_continuous(breaks = seq(0, max(lactobacillus_df$study_day), by = 1)) +
+  theme_minimal() +
+  labs(x = "Study Day", y = "Logged Relative Abundance of Lactobacillus",
+       color="Participant ID")
+
+# Join menses and vaginal microbiome data
+vaginal.microbial.menses.24.subset <- vaginal.microbial.menses.24 %>% 
+  select(biome_id, logDate, CST, SampleID, shannon, timestamp, menses_day)
+lactobacillus.menses <- lactobacillus_df %>% 
+  left_join(vaginal.microbial.menses.24.subset, by=c("SampleID", "biome_id", "logDate", "timestamp"))
+
+library(lme4)
+
+lm.model <- lm(Lactobacillus_log~menses_day*study_day, data=lactobacillus.menses)
+summary(lm.model)
+
+# Add a small constant to avoid zero values
+lactobacillus.menses$Lactobacillus_log <- log(lactobacillus.menses$LactobacillusRelativeAbundance + 1e-6)
+
+lacto.menses.model <- lmer(Lactobacillus_log ~ menses_day + (1|biome_id), data = lactobacillus.menses)
+r2(lacto.menses.model)
+summary(lacto.menses.model)
+
+lacto.menses.model <- lmer(Lactobacillus_log ~ menses_day + study_day + (1|biome_id), data = lactobacillus.menses)
+r2(lacto.menses.model)
+
+# Figure: Relative Abundance of Lactobacillus Abundance Over Time by menses day
+lactobacillus.menses %>% 
+  filter(!is.na(menses_day)) %>% 
+  ggplot(aes(x = as.numeric(study_day), y = LactobacillusRelativeAbundance, group=menses_day, color=as.factor(menses_day))) +
+    geom_point(alpha = 0.3) +
+    geom_smooth(method = "loess", se = FALSE, size = 0.5) + 
+    scale_x_continuous(breaks = seq(0, max(lactobacillus_df$study_day), by = 1)) +
+    theme_minimal() +
+    scale_y_log10() +
+    labs(x = "Study Day", y = "Logged Relative Abundance of Lactobacillus",
+         color="Participant ID")
 
 
-# # Boxplot of diversity by log date
-# par(mfrow=c(1,1))
-# boxplot(shannon.qr.merged$shannon~shannon.qr.merged$logDate, col="lightblue", ylab="Shannon", xlab="Log Date")
-# 
-# # Boxplot of species number by year, for 4 repeats
-# par(mfrow=c(2,2))
-# for (i in 1:length(repeats)) {
-#   boxplot(specnum.qr.merged.17$spec.num[specnum.qr.merged$uid==repeats[i]],
-#           specnum.qr.merged.18$spec.num[specnum.qr.merged$uid==repeats[i]],
-#           names=c("2017", "2018"), ylab="species number", main=paste("Subj", i, sep=" "))
-# }
-# 
-# # Boxplot of diversity by user ID
-# unique.uid <- sort(unique(shannon.qr.merged$uid))
-# num.uid <- length(unique.uid) # number of user IDs
-# heatcols <- colorRamp(c("yellow", "red3"))
-# tempcolors <- rgb(heatcols(table(shannon.qr.merged$uid)/max(table(shannon.qr.merged$uid)))/255)
-# 
-# par(mfrow=c(1,1), mai=c(1, 1, .5, .5))
-# boxplot(shannon.qr.merged$shannon~shannon.qr.merged$uid, las=1, border=tempcolors, axes=FALSE, 
-#         xlab="Subject", ylab="Shannon")
-# axis(1, at=1:num.uid, labels=1:num.uid)
-# axis(2, at=0:4)
-# text(x=1:num.uid, y=rep(4.3, num.uid),
-#      labels=table(shannon.qr.merged$uid),
-#      xpd=TRUE, col=tempcolors)
-# 
-# # Diversity over time for each user
-# par(mfrow=c(3,3), mai=c(.6,.6,.3,.3))
-# i <- 1
-# for (i.uid in unique.uid){
-#   current.div <- shannon.qr.merged$shannon[shannon.qr.merged$uid==i.uid]
-#   current.dates <- shannon.qr.merged$logDate[shannon.qr.merged$uid==i.uid]
-#   date.cols <- rep("blue", length(current.dates))
-#   date.cols[current.dates > "2017-04-30"] <- "red"
-#   plot(current.div~current.dates, xlim=c(min(current.dates, na.rm=TRUE), max(current.dates, na.rm=TRUE)), ylim=c(0, 4), 
-#        xlab="Date", ylab="Shannon", main=i, las=1, col=date.cols)
-#   i <- i + 1
-# }
-# 
+# Figure: plot of average shannon for each participant on menses vs. not on menses
+lactobacillus.menses.summary <- lactobacillus.menses %>% 
+  group_by(biome_id, menses_day) %>% 
+  summarise(avg_lacto = mean(LactobacillusRelativeAbundance, na.rm = TRUE)) %>%
+  pivot_wider(names_from = menses_day, values_from = avg_lacto, names_prefix = "menses_day_") %>%
+  filter(!is.na(menses_day_not_menses) & !is.na(menses_day_menses)) %>%
+  select(!menses_day_NA)
+
+### Wilcox test
+wilcox.test(lactobacillus.menses.summary$menses_day_not_menses,
+            lactobacillus.menses.summary$menses_day_menses, paired=TRUE)
+t.test(lactobacillus.menses.summary$menses_day_not_menses,
+       lactobacillus.menses.summary$menses_day_menses, paired=TRUE)
+
+##########################################################################################
 
