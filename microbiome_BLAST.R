@@ -1,3 +1,10 @@
+########################
+#
+# BLAST of Most Common Taxa - Species_exact reassignment
+# Last updated: 03/20/2025
+#
+#########################
+
 library(vegan)
 library(pheatmap)
 library(tidyverse)
@@ -128,6 +135,8 @@ tax.22 <- tax.22 %>%
   left_join(BLAST_taxa, by=c("OTU_name", "sequence"))
 tax.22 <- tax.22 %>% 
   mutate(BLAST_species = ifelse(is.na(BLAST_species), Species_exact, BLAST_species))
+tax.22 <- tax.22 %>% 
+  distinct()
 rownames(tax.22) <- taxa_names(fecal.bacterial.data)
 tax.22 <- tax.22 %>% 
   select(-OTU_name)

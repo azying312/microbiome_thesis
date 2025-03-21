@@ -13,7 +13,7 @@ source("~/Microbiome Thesis/functions.R")
 
 # bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/fecal_bacteria_filteredv2.rds")
 # RELABELED DATA
-bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_bacteria_cleanedv3.rds")
+bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_data/fecal_cleaned_max_taxa.rds")
 
 ###############################################################################################
 
@@ -51,7 +51,8 @@ max_taxa <- apply(relative_abundance_otu_t, 1, function(sample) { # on relabeled
 bacteria_metadata_df$max_taxa <- max_taxa
 
 # Get max taxa names
-bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "Species_exact"]) # 1418 samples
+# bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "Species_exact"]) # 1418 samples
+bacteria_metadata_df$OTU <- as.character(bacteria_taxa_df[bacteria_metadata_df$max_taxa, "BLAST_species"])
 
 ################################################################################
 
@@ -79,7 +80,7 @@ shannon.qr.merged.24 <- shannon.qr.merged.24 %>%
   # Filter the data to be within study days: 10-14 to 12-14
   filter(logDate > "2022-10-13" & logDate < "2022-12-15") # 2038 to 1971
 
-dim(shannon.qr.merged.24)
+dim(shannon.qr.merged.24) # 1401   10
 
 ###############################################################################################
 
@@ -104,7 +105,7 @@ uminn_data_fecal <- uminn_data %>%
 uminn_data_fecal <- uminn_data_fecal %>% 
   left_join(fecal_data, by="qr")
 
-# 345 - in sequenced data but not in the uminn returned swabs --> 340
+# 345 - in sequenced data but not in the uminn returned swabs --> 339
 length(setdiff(shannon.qr.merged.24$qr, uminn_data_fecal$qr)) 
 length(setdiff(uminn_data_fecal$qr, shannon.qr.merged.24$qr)) # 19
 
@@ -124,31 +125,31 @@ gut_relative_abundances_df_subset <- gut_relative_abundances_df %>%
   filter(biome_id %in% c(1,2,3))
 
 top10_species <- gut_relative_abundances_df %>% 
-  group_by(Species_exact) %>% 
+  group_by(BLAST_species) %>% 
   # group_by(biome_id, Species_exact) %>% 
   summarise(Total_Abundance = sum(Abundance), .groups = "drop") %>% 
   arrange(desc(Total_Abundance)) %>%  
   # arrange(biome_id, desc(Total_Abundance)) %>%  
   # group_by(biome_id) %>%
   slice_head(n = 10) %>% 
-  pull(Species_exact)
+  pull(BLAST_species)
 
 top10_df <- gut_relative_abundances_df %>% 
-  filter(Species_exact %in% top10_species) %>%
-  group_by(biome_id, Species_exact) %>% 
+  filter(BLAST_species %in% top10_species) %>%
+  group_by(biome_id, BLAST_species) %>%
   summarise(Total_Abundance = sum(Abundance), .groups = "drop")
 
 top10_relative_df <- top10_df %>% 
   group_by(biome_id) %>%
   mutate(Relative_Abundance = Total_Abundance / sum(Total_Abundance) * 100)
 
-ggplot(top10_relative_df, aes(x = factor(biome_id), y = Relative_Abundance, fill = Species_exact)) +
+# Figure: Top 10 Species Across Study in Gut Microbiome per Participant
+ggplot(top10_relative_df, aes(x = factor(biome_id), y = Relative_Abundance, fill = BLAST_species)) +
   geom_bar(stat = "identity", position = "fill") +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal() +
   scale_fill_viridis_d() +
   labs(title = "Top 10 Species per Participant", x = "Participant", y = "Relative Abundance")
-
 
 ###############################################################################################
 # menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/imputed_menstruation_data_2_12.csv")
@@ -161,7 +162,7 @@ menses.data <- menses.data %>%
 menses.data.long <- menses.data %>% 
   pivot_longer(cols=starts_with("2022-"), names_to="logDate", values_to="menses_status")
 
-fecal.microbial.menses.24 <- shannon.cst.qr.merged.24 %>% 
+fecal.microbial.menses.24 <- shannon.qr.merged.24 %>% 
   left_join(menses.data.long, by=c("biome_id", "logDate"))
 
 fecal.microbial.menses.24 <- fecal.microbial.menses.24 %>% 
@@ -169,6 +170,7 @@ fecal.microbial.menses.24 <- fecal.microbial.menses.24 %>%
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA))) %>% 
   mutate(menses_day = ifelse(is.na(menses_day), "not_menses", "menses"))
 
+# 03/21 saved
 # write.csv(fecal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut.microbial.menses.24.csv")
 
 menses.table.df <- fecal.microbial.menses.24 %>% 
@@ -279,6 +281,7 @@ for(id in participant_ids) {
 fecal.microbial.menses.24.filtered <- fecal.microbial.menses.24 %>% 
   filter(!is.na(survey_menstruate))
 
+# Figure: scatterplot of gut microbiome shannon diversity and menses
 ggplot(fecal.microbial.menses.24.filtered, aes(x = as.Date(logDate), y = shannon)) +
   geom_point(aes(color=as.factor(survey_menstruate))) +
   geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(survey_menstruate))) +
@@ -292,6 +295,132 @@ ggplot(fecal.microbial.menses.24.filtered, aes(x = as.Date(logDate), y = shannon
   scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
 
+### Birth Control
+
+## Corr with volunteer history data
+participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
+
+# filter non-hormonal & no samples
+participant.data <- participant.data %>% 
+  filter(birthControl!="Orilissa (Elagolix)")
+
+# select birth control
+birthControl.df <- participant.data %>% 
+  select(biome_id, birthControl)
+birthControl.collapsed <- birthControl.df %>% 
+  count(birthControl, name="frequency")
+
+# merge df for shannon index with birth control
+shannon.birthControl <- menses.table.df %>% 
+  left_join(birthControl.df, by="biome_id") %>% 
+  filter(!is.na(birthControl))
+
+# add days
+shannon.birthControl <- study_days(shannon.birthControl)
+
+# Figure: boxplot of birth control and shannon diversity
+ggplot(shannon.birthControl, aes(x = birthControl, y = shannon)) +
+  geom_jitter(aes(color=as.factor(biome_id)), size=1, alpha=0.6) +
+  geom_boxplot(fill="skyblue", outlier.shape = NA, alpha = 0.1) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Contraceptive", y = "Shannon Diversity Index", title = "",
+       color = "Biome ID") +
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
+
+# Mixed effects models
+library(lme4)
+library(lmerTest)
+library(performance)
+
+lmer.shannon.bc <- lmer(shannon~birthControl + (1|`biome_id`), data = shannon.birthControl)
+r2(lmer.shannon.bc)
+summary(lmer.shannon.bc)
+
+lmer.shannon.bc.time <- lmer(shannon~study_day + birthControl + (1|`biome_id`), data = shannon.birthControl)
+r2(lmer.shannon.bc.time)
+summary(lmer.shannon.bc.time)
+
+lmer.shannon.bc.time2 <- lmer(shannon~study_day + I(study_day^2) + birthControl + (1|`biome_id`), data = shannon.birthControl)
+r2(lmer.shannon.bc.time2)
+summary(lmer.shannon.bc.time2)
+
+# Try birth control v. none
+shannon.birthControl.binary <- shannon.birthControl %>% 
+  mutate(bc_binary = ifelse(birthControl=="None", "None", "birtControl"))
+lmer.shannon.bc.binary <- 
+  lmer(shannon~bc_binary + (1|`biome_id`), data = shannon.birthControl.binary)
+r2(lmer.shannon.bc.binary)
+summary(lmer.shannon.bc.binary)
+
+# Collapse birth control variable
+shannon.birthControl.collapsed <- shannon.birthControl %>% 
+  mutate(birthControl_collapsed=ifelse(birthControl=="Systemic Combined (E&P)" | (birthControl=="Systemic P only"), "Systemic", 
+                                       birthControl)) %>% 
+  mutate(birthControl=as.factor(birthControl))
+
+shannon.birthControl.collapsed$birthControl_collapsed <- factor(shannon.birthControl.collapsed$birthControl_collapsed, levels=c("None", "Local P", "Systemic"))
+
+lmer.shannon.bc.collapsed <- lmer(shannon~birthControl_collapsed + (1|`biome_id`), data = shannon.birthControl.collapsed)
+r2(lmer.shannon.bc.collapsed)
+summary(lmer.shannon.bc.collapsed)
+
+# Figure: boxplot of collapsed systemic birth control and shannon diversity
+ggplot(shannon.birthControl.collapsed, aes(x = birthControl_collapsed, y = shannon)) +
+  geom_jitter(aes(color=as.factor(biome_id)), size=1, alpha=0.6) +
+  geom_boxplot(fill="skyblue", outlier.shape = NA, alpha = 0.1) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Contraceptive", y = "Shannon Diversity Index", title = "",
+       color = "Biome ID") +
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
+
+# Average Shannon diversity per person
+shannon.birthControl.avg <- shannon.birthControl %>%
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon) / n(),
+            birthControl = first(birthControl))
+
+# Figure: boxplot of birth control and avg shannon diversity
+ggplot(shannon.birthControl.avg, aes(x = birthControl, y = avg_shannon)) +
+  geom_jitter(aes(color=as.factor(biome_id)), size=1, alpha=0.6) +
+  geom_point(aes(color=as.factor(biome_id)), size=1, alpha=0.7) +
+  geom_boxplot(fill="skyblue", outlier.shape = NA, alpha = 0.1) +
+  # geom_text(aes(label = as.factor(biome_id)), vjust = -0.5, hjust=1.5, size = 1.5) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Contraceptive", y = "Average Shannon Diversity Index", title = "",
+       color = "Biome ID") +
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
+
+lm.avgshannon.bc <- lm(avg_shannon~birthControl, data = shannon.birthControl.avg)
+summary(lm.avgshannon.bc)
+
+# Average Shannon diversity per person
+shannon.birthControl.collapsed.avg <- shannon.birthControl.collapsed %>%
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon) / n(),
+            birthControl_collapsed = first(birthControl_collapsed))
+
+# Figure: boxplot of collapsed Systemic birth control and avg shannon diversity
+ggplot(shannon.birthControl.collapsed.avg, aes(x = birthControl_collapsed, y = avg_shannon)) +
+  geom_jitter(aes(color=as.factor(biome_id)), size=1, alpha=0.6) +
+  geom_point(aes(color=as.factor(biome_id)), size=1, alpha=0.7) +
+  geom_boxplot(fill="skyblue", outlier.shape = NA, alpha = 0.1) +
+  # geom_text(aes(label = as.factor(biome_id)), vjust = -0.5, hjust=1.5, size = 1.5) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Contraceptive", y = "Average Shannon Diversity Index", title = "",
+       color = "Biome ID") +
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
+
+lm.avgshannon.bc.collapsed <- lm(avg_shannon~birthControl_collapsed, data = shannon.birthControl.collapsed.avg)
+summary(lm.avgshannon.bc.collapsed)
+
+##########################################################################################
+
+# Menses
+full_menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+
+# Q: how many days with fecal swabs do I have menses info for (from vaginal)
+head(fecal.microbial.menses.24.filtered)
+head(full_menses_data)
 
 ##########################################################################################
 
@@ -594,25 +723,5 @@ lmer_genus <- lmer(Abundance ~ study_day + Abundance + (1 | biome_id), data = ge
 summary(lmer_genus)
 
 ##########################################################################################
-
-## Corr with volunteer history data
-participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
-
-# filter non-hormonal & no samples
-participant.data <- participant.data %>% 
-  filter(birthControl!="Orilissa (Elagolix)")
-
-# select birth control
-birthControl.df <- participant.data %>% 
-  select(biome_id, birthControl)
-birthControl.collapsed <- birthControl.df %>% 
-  count(birthControl, name="frequency")
-
-# merge df for shannon index with birth control
-shannon.birthControl <- menses.table.df %>% 
-  left_join(birthControl.df, by="biome_id") %>% 
-  filter(!is.na(birthControl))
-
-
 
 

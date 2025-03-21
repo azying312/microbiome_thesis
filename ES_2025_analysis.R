@@ -1,6 +1,6 @@
 ########################
 #
-# Exploration of the DASS Data
+# ES Abstract Code
 # Last updated: 03/18/2025
 # data saved from microbiome_vaginal_analysis.R
 #
@@ -47,15 +47,10 @@ shannon.birthControl <- shannon.birthControl %>%
   group_by(biome_id) %>% 
   mutate(avg_shannon=sum(shannon)/n())
 
-# Collapse by person (assign to most frequent CST)
-shannon.birthControl.collapsed <- shannon.birthControl %>%
+# Collapse by person 
+shannon.birthControl.collapsed <- shannon.birthControl %>% 
   group_by(biome_id) %>% 
-  count(CST, name="frequency") %>% # total 148 (participants have more than 1 CST) 
-  slice_max(frequency, n=1) %>% # collapse to their most frequent CST
-  rename(CST_max=CST) %>% 
-  ungroup() %>%
-  left_join(select(shannon.birthControl, biome_id, birthControl, shannon, avg_shannon, CST), by = "biome_id") %>% 
-  distinct(biome_id, .keep_all = TRUE)
+  summarise()
 
 table(shannon.birthControl$CST)
 table(shannon.birthControl.collapsed$CST_max)
