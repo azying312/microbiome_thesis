@@ -1,11 +1,11 @@
 library(tidyverse)
 
 sleep_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_sleep.csv")
-dass_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_dass.csv")
+dass_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/DASS_0503_2024-final_df.csv") # read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_dass.csv")
 merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
 fitbit_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
 med_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_med_data.csv")
-menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
+menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE) # read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
 survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 sex_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 3-Sexual Activity.csv")
 

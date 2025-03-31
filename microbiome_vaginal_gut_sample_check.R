@@ -1002,13 +1002,19 @@ write.csv(samples.data4,
 # Relabeled data
 relabeled_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_samplesv2 - relabeled_information.csv")
 
+head(relabeled_data)
+dim(relabeled_data)
+unique(relabeled_data$Participant)
+
 vaginal0 <- relabeled_data %>% 
   filter(Vaginal != 0)
 length((unique(vaginal0$Participant)))
+sum(vaginal0$Vaginal)
 
 fecal0 <- relabeled_data %>% 
   filter(Fecal != 0)
 length((unique(fecal0$Participant)))
+sum(fecal0$Fecal)
 
 ####################################################################################
 # Paired samples - cross site analysis

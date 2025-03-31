@@ -5,6 +5,9 @@
 #
 #########################
 
+library(tidyverse)
+library(viridis)
+
 source("~/Microbiome Thesis/functions.R")
 
 ## Packages
@@ -21,6 +24,37 @@ merged_diet_data <- merged_diet_data %>%
   mutate(Date=as.Date(Date)) %>% 
   filter(Date < as.Date("2022-12-17")) 
 
+# Get average cal intake for participants
+merged_diet_data_collapsed <- merged_diet_data %>% 
+  group_by(biome_id, Date) %>% 
+  summarise(total_cals = sum(caloriesall),
+            entries_per_day = n()) %>% 
+  ungroup() %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_study_cals = sum(total_cals / n()),
+            submission_days = n(),
+            entries_through_study = sum(entries_per_day),
+            avg_entries = sum(entries_per_day)/n())
+
+head(merged_diet_data_collapsed, 7)
+
+# summary stats about diet data
+summary(merged_diet_data_collapsed$submission_days)
+summary(merged_diet_data_collapsed$avg_study_cals)
+summary(merged_diet_data_collapsed$avg_entries)
+
+# Figure: average caloric intake across study for participants
+ggplot(merged_diet_data_collapsed, aes(x =  avg_study_cals)) + 
+  geom_histogram(bins = 50, fill="orchid", color = "black") +
+  # step size adj
+  scale_x_continuous(
+    breaks = seq(0, max(merged_diet_data_collapsed$avg_study_cals), by = 50)  
+  ) +
+  labs(x = "Daily Average Calories", y = "Frequency", title = "") +
+  theme_minimal()
+
+summary(merged_diet_data_collapsed$avg_cals)
+
 all_days <- seq.Date(as.Date(min(merged_diet_data$Date, na.rm=TRUE)), 
                      as.Date(max(merged_diet_data$Date, na.rm=TRUE)), by = "day")
 
@@ -29,7 +63,7 @@ expanded_data <- expand.grid(biome_id = unique(merged_diet_data$biome_id), Date 
 expanded_data <- left_join(expanded_data, merged_diet_data, by = c("biome_id", "Date"))
 
 diet_data_subset <- merged_diet_data %>% 
-  select(biome_id, Date, type, name, caloriesall, proteinall, sugarsall, fatall, food_other)
+  dplyr::select(biome_id, Date, type, name, caloriesall, proteinall, sugarsall, fatall, food_other)
 
 # get meals per day (only 3 meals max)
 meals_per_day <- diet_data_subset %>%
@@ -82,6 +116,11 @@ names(merged_diet_data)
 
 head(merged_diet_data)
 
+merged_diet_data %>% 
+  group_by(biome_id, Date) %>% 
+  summarise(count=n()) %>% 
+  dplyr::select(count)
+
 #### Vegetarian
 common_meats <- c("beef", "fish", "pork", "chicken", "steak", "turkey", "shrimp", "sushi", "burger king hamburger", 
                     "salmon", "tonkotsu", "mcrib", "bacon", "meatballs", "taco de birria", "meat", "sausage", "burger",
@@ -110,10 +149,10 @@ merged_diet_data <- merged_diet_data %>%
 # Look at exclusions
 merged_diet_data <- merged_diet_data %>%
   mutate(vegetarian = ifelse(str_detect(name_lower, exclude_pattern), TRUE, vegetarian)) %>% 
-  select(-name_lower)
+  dplyr::select(-name_lower)
 
 unique_vegetarian_pairs <- merged_diet_data %>%
-  select(name, vegetarian) %>%  
+  dplyr::select(name, vegetarian) %>%  
   distinct() %>%                
   arrange(name) 
 
@@ -135,7 +174,7 @@ merged_diet_data <- merged_diet_data %>%
 
 ##########################################################################################
 merged_diet_data_vegetarian <- merged_diet_data %>% 
-  select(biome_id, is_vegetarian) %>% 
+  dplyr::select(biome_id, is_vegetarian) %>% 
   distinct(biome_id, is_vegetarian)
 
 ## Collapse diet data to day nutrition
@@ -211,7 +250,7 @@ table(vaginal.microbial.menses.24.summary$is_vegetarian_bin)
 
 ggplot(vaginal.microbial.menses.24.summary, aes(x = is_vegetarian_bin, y = avg_shannon)) +
   geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  geom_jitter(width = 0.2, alpha = 0.9, color="orchid") +
   labs(
     x = " ", 
     y = "Average Shannon Diversity", 
@@ -239,6 +278,8 @@ veg_perc_df <- veg_perc_df %>%
 
 vegetarian.diet.df <- merged_diet_data %>% 
   left_join(veg_perc_df, by="biome_id")
+
+summary(vegetarian.diet.df$perc_veg)
 
 # write.csv(
 #   vegetarian.diet.df,
@@ -269,7 +310,7 @@ participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_R
 
 # select birth control
 birthControl.df <- participant.data %>% 
-  select(biome_id, birthControl)
+  dplyr::select(biome_id, birthControl)
 birthControl.collapsed <- birthControl.df %>% 
   count(birthControl, name="frequency")
 shannon.birthControl <- shannon.cst.qr.merged.24 %>% 
@@ -288,7 +329,7 @@ shannon.birthControl.collapsed <- shannon.birthControl %>%
   slice_max(frequency, n=1) %>% # collapse to their most frequent CST
   rename(CST_max=CST) %>% 
   ungroup() %>%
-  left_join(select(shannon.birthControl, biome_id, birthControl, shannon, avg_shannon, CST), by = "biome_id") %>% 
+  left_join(dplyr::select(shannon.birthControl, biome_id, birthControl, shannon, avg_shannon, CST), by = "biome_id") %>% 
   distinct(biome_id, .keep_all = TRUE)
 
 shannon.birthControl.collapsed.diet <- shannon.birthControl.collapsed %>% 
@@ -340,7 +381,7 @@ ggplot(veg_perc_df, aes(x = shannon, y = perc_veg)) +
 ggplot(shannon.birthControl.collapsed.diet, aes(x = perc_veg, y = avg_shannon)) +
   geom_point() +
   labs(x = "Percent Vegetarian", y = "Average Shannon Diversity", 
-       title = "Scatter Plot of Average Shannon Diversity v. Percent Vegetarian") +
+       title = " ") +
   theme_minimal()
 
 # Diet: scatter plot of percent vegetarian on average shannon diversity colored by Birth control
@@ -365,7 +406,7 @@ shannon.birthControl.collapsed.diet %>%
 
 # vaginal microbiota and specific nutrient intake
 
-nutrient.diet.22 <- past_two_days_diet_data %>% #merged_diet_data %>% 
+nutrient.diet.22 <-  merged_diet_data %>% #past_two_days_diet_data %>% #
   group_by(biome_id, Date) %>% 
   summarise(cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
             satFat_prop = sum(saturatedFatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
@@ -419,22 +460,90 @@ nutrient.diet.22.microbiome <- shannon.cst.qr.merged.24 %>%
 
 # Diet nutrients: pairwise plots for correlation between nutrients
 macronutrients <- nutrient.diet.22.microbiome %>% 
-  select(-c(SampleID, CST,  biome_id, shannon, qr, logDate, status, timestamp, sampleType, max_taxa, OTU))
-  # select(!c(biome_id, avg_shannon, max_CST))
-pairs(macronutrients)
+  dplyr::select(-c(SampleID, CST,  biome_id, shannon, qr, logDate, status, timestamp, sampleType, max_taxa, OTU, CST_max))
+  # dplyr::select(!c(biome_id, avg_shannon, max_CST))
 
-# regress the nutrients on CST
-library(nnet)
+macronutrients_renamed <- macronutrients %>%
+  rename(
+    Cholesterol = cholesterol_prop,
+    `Saturated Fat` = satFat_prop,
+    Sodium = sodium_prop,
+    Carbohydrates = carb_prop,
+    `Dietary Fiber` = dietFib_prop,
+    Sugar = sugar_prop,
+    Protein = protein_prop,
+    Fat = fat_prop,
+  )
 
-multinom.nutrients.CST <- multinom(CST ~ ., data = nutrient.diet.22.microbiome[,-c(1,3,4,5,6,7,8,9,10,11)])
-summary(multinom.nutrients.CST)
+names(macronutrients_renamed)
 
-library(car)
-# Wald test on coefficients
-Anova(multinom.nutrients.CST, type = "II")
+# Figure: corr plots of macronutrients
+pairs(macronutrients_renamed[,-c(9,10)])
 
-pred_probs <- predict(multinom.nutrients.CST, nutrient.diet.22.microbiome, type = "probs")
-nutrient.diet.22.microbiome_pred_probs <- cbind(nutrient.diet.22.microbiome, pred_probs)
+# # regress the nutrients on CST
+# library(nnet)
+# library(glmmTMB)
+# library(mme)
+# multinom.nutrients.CST <- multinom(CST ~ ., data = nutrient.diet.22.microbiome[,-c(1,3,4,5,6,7,8,9,10,11)])
+# summary(multinom.nutrients.CST)
+
+# library(car)
+# # Wald test on coefficients
+# Anova(multinom.nutrients.CST, type = "II")
+# 
+# pred_probs <- predict(multinom.nutrients.CST, nutrient.diet.22.microbiome, type = "probs")
+# nutrient.diet.22.microbiome_pred_probs <- cbind(nutrient.diet.22.microbiome, pred_probs)
+# 
+# # format into matrix
+# y_matrix <- model.matrix(~ 0 + CST, data = nutrient.diet.22.microbiome)
+# x_matrix <- model.matrix(~ ., data = nutrient.diet.22.microbiome[,-c(1,3,4,5,6,7,8,9,10,11,12)])
+# group <- as.factor(nutrient.diet.22.microbiome$biome_id)
+# 
+# names(nutrient.diet.22.microbiome)
+# head(nutrient.diet.22.microbiome[,-c(1,3, 4, 7:12)])
+# 
+# nutrient.diet.22.microbiome.subset <- 
+#   nutrient.diet.22.microbiome[,-c(1,3, 4, 7:12)] %>% 
+#   rename(satfatToFat_prop = satfat_prop_fat,
+#          fatcal_prop = fat_cal_prop)
+
+# Mixed effects multinomial model
+# install.packages("brms")
+# library(brms)
+# 
+# model <- brm(
+#   formula = CST ~ cholesterol_prop + satFat_prop + sodium_prop + carb_prop + dietFib_prop + sugar_prop + 
+#     protein_prop + fat_prop + satfatToFat_prop + fatcal_prop + (1 | biome_id),
+#   data = nutrient.diet.22.microbiome.subset,
+#   family = categorical(),
+#   # prior = c(
+#   #   set_prior("normal(0, 5)", class = "b"),    # Priors for fixed effects (predictors)
+#   #   set_prior("normal(0, 5)", class = "sd"),   # Priors for random effects (biome_id)
+#   #   set_prior("normal(0, 5)", class = "Intercept")  # Priors for intercepts in multinomial model
+#   # ),
+#   chains = 4,
+#   iter = 2000
+# )
+# summary(model)
+# 
+# # attempt 2
+# 
+# model <- brm(
+#   formula = CST ~ cholesterol_prop + satFat_prop + sodium_prop + carb_prop + dietFib_prop + sugar_prop + 
+#     protein_prop + fat_prop + satfatToFat_prop + fatcal_prop + (1 | biome_id),
+#   data = nutrient.diet.22.microbiome.subset,
+#   family = categorical(),
+#   # prior = c(
+#   #   set_prior("normal(0, 5)", class = "b"),    # Priors for fixed effects (predictors)
+#   #   set_prior("normal(0, 5)", class = "sd"),   # Priors for random effects (biome_id)
+#   #   set_prior("normal(0, 5)", class = "Intercept")  # Priors for intercepts in multinomial model
+#   # ),
+#   chains = 5,
+#   iter = 5000
+# )
+# summary(model)
+
+head(nutrient.diet.22.microbiome.subset)
 
 ## visualize significant nutrients
 # dietary fiber
@@ -492,7 +601,7 @@ library(performance)
 # Shannon diversity and nutrients
 # vaginal microbiota and specific nutrient intake
 
-nutrient.diet.22.day <- past_two_days_diet_data %>% #merged_diet_data %>% 
+nutrient.diet.22.day <- merged_diet_data %>% # past_two_days_diet_data %>% #
   group_by(biome_id, Date) %>% 
   summarise(caloriesall_avg = sum(caloriesall, na.rm=TRUE) / n(), # get avg cals per day
             cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
@@ -514,33 +623,34 @@ nutrient.diet.22.day.microbiome <- shannon.cst.qr.merged.24 %>%
   left_join(nutrient.diet.22.day, by = c("biome_id", "logDate"))
 
 nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome %>% 
-  group_by(biome_id) %>% 
-  filter(n() > 10)
+  group_by(biome_id) #%>% 
+  # filter(n() > 10)
 table(nutrient.diet.22.day.microbiome.filtered$biome_id)
 
 ## Different baseline, same slope, different intercept
 
-# Full model (no avg cal)
-lmer.full <- lmer(shannon~.+(1|`biome_id`), 
-                  data = nutrient.diet.22.day.microbiome.filtered[, !names(nutrient.diet.22.day.microbiome.filtered) %in%
-                                                                    c(
-                                                                      # "caloriesall_avg",
-                                                                      "SampleID",
-                                                                      "CST",
-                                                                      "qr",
-                                                                      "status",
-                                                                      "logDate",
-                                                                      "status",
-                                                                      "timestamp",
-                                                                      "sampleType",
-                                                                      "max_taxa",
-                                                                      "OTU")])
+# num participants
+length(unique(nutrient.diet.22.day.microbiome.filtered$biome_id))
+
+# Full model 
+lmer.full <- lmer(shannon~caloriesall_avg+cholesterol_prop+satFat_prop+
+                    sodium_prop+carb_prop+dietFib_prop+sugar_prop+
+                    protein_prop+fat_prop+fat_cal_prop+addedSugarall_prop+(1|`biome_id`), 
+                  data = nutrient.diet.22.day.microbiome.filtered)
 summary(lmer.full)
 r2(lmer.full)
 
 # vaginal.microbial.menses.24.veg
 nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome.filtered %>% 
   mutate(caloriesall_avg_scale = scale(caloriesall_avg))
+
+# Full model (no avg cal)
+lmer.full <- lmer(shannon~caloriesall_avg_scale+cholesterol_prop+satFat_prop+
+                    sodium_prop+carb_prop+dietFib_prop+sugar_prop+
+                    protein_prop+fat_prop+fat_cal_prop+addedSugarall_prop+(1|`biome_id`), 
+                  data = nutrient.diet.22.day.microbiome.filtered)
+summary(lmer.full)
+r2(lmer.full)
 
 lmer.avg.cal <- lmer(shannon~caloriesall_avg+(1|`biome_id`), data=nutrient.diet.22.day.microbiome.filtered)
 lmer.choles  <- lmer(shannon~cholesterol_prop+(1|`biome_id`),  data=nutrient.diet.22.day.microbiome.filtered)
@@ -653,16 +763,17 @@ nutrient.diet <- study_days(nutrient.diet.22.day.microbiome.filtered)
 lmer.full <- lmer(shannon~cholesterol_prop +
                     satFat_prop + sodium_prop + carb_prop +
                     dietFib_prop + sugar_prop + protein_prop +
-                    fat_prop + addedSugarall_prop + #caloriesall_avg +
+                    fat_prop + addedSugarall_prop + caloriesall_avg +
                     (1|`biome_id`), 
                   data = nutrient.diet)
+summary(lmer.full)
 r2(lmer.full)
 
 ## Time
 nutrients.time.model <- lmer(shannon ~ study_day + cholesterol_prop +
                                satFat_prop + sodium_prop + carb_prop +
                                dietFib_prop + sugar_prop + protein_prop +
-                               fat_prop + addedSugarall_prop + #caloriesall_avg +
+                               fat_prop + addedSugarall_prop + caloriesall_avg +
                                (1 | biome_id),
                              data = nutrient.diet)
 r2(nutrients.time.model)
@@ -673,7 +784,7 @@ anova(lmer.full, nutrients.time.model)
 nutrients.time.model2 <- lmer(shannon ~ study_day + I(study_day^2) + cholesterol_prop +
                                 satFat_prop + sodium_prop + carb_prop +
                                 dietFib_prop + sugar_prop + protein_prop +
-                               fat_prop + addedSugarall_prop + #caloriesall_avg +
+                               fat_prop + addedSugarall_prop + caloriesall_avg +
                               (1 | biome_id),
                               data = nutrient.diet)
 r2(nutrients.time.model2)
@@ -691,6 +802,8 @@ bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_
 
 bacterial.taxa <- tax_table(bacterial.data)
 
+sample_data_df <- as(sample_data(genus.ra), "data.frame")
+length(unique(sample_data_df$biome_id))
 
 # aggregate at genus level & relative abundances
 genus.taxa <- tax_glom(bacterial.data, taxrank = "Genus")
@@ -701,11 +814,11 @@ bactieral.meta <- as(sample_data(genus.ra), "data.frame")
 veg_perc_df <- veg_perc_df %>% 
   mutate(is_vegetarian=ifelse(perc_veg ==100, TRUE, FALSE))
 veg_perc_df.subset <- veg_perc_df %>%
-  select(SampleID, CST, shannon, biome_id, logDate, sampleType, perc_veg, is_vegetarian)
+  dplyr::select(SampleID, CST, shannon, biome_id, logDate, sampleType, perc_veg, is_vegetarian)
 genus.ra.merged <- bactieral.meta %>% 
   left_join(veg_perc_df.subset, by=c("SampleID", "biome_id", "logDate", "sampleType"))
 nutrient.diet.22.day.microbiome.filtered.subset <- nutrient.diet.22.day.microbiome.filtered %>% 
-  select(!c(qr, status, timestamp, sampleType))
+  dplyr::select(!c(qr, status, timestamp, sampleType))
 genus.ra.nutrient.merged <- genus.ra.merged %>% 
   left_join(nutrient.diet.22.day.microbiome.filtered.subset, by=c("SampleID", "biome_id", "logDate", "CST", "shannon"))
 rownames(genus.ra.nutrient.merged) <- genus.ra.nutrient.merged$SampleID
@@ -714,22 +827,28 @@ sample_data(genus.ra) <- sample_data(genus.ra.nutrient.merged)
 # ordination
 genus.ordination <- ordinate(genus.ra, method = "PCoA", distance = "bray")
 
-# Figure: cluster by vegetarian
+# Diet: ordincation cluster by vegetarian
 plot_ordination(genus.ra, genus.ordination, color = "is_vegetarian") + 
   geom_point(size=3) +
+  labs(color="Vegetarian Status")+
+  scale_color_viridis(discrete=TRUE)+
   geom_text_repel(aes(label = biome_id), size = 3) +
   theme_minimal()
 
-# Figure: cluster by percent vegetarian
+# Diet: cluster by percent vegetarian
 plot_ordination(genus.ra, genus.ordination, color = "perc_veg") + 
   geom_point(size=3) +
   geom_text_repel(aes(label = biome_id), size = 3) +
+  labs(color="Percent Vegetarian")+
+  scale_color_viridis()+
   theme_minimal()
 
-# Figure: cluster by Cholesterol Intake
+# Diet: cluster by Cholesterol Intake
 plot_ordination(genus.ra, genus.ordination, color = "cholesterol_prop") + 
   geom_point(size=3) +
   geom_text_repel(aes(label = biome_id), size = 3) +
+  labs(color="Percent Vegetarian")+
+  scale_color_viridis()+
   theme_minimal()
 
 # clean df
@@ -755,7 +874,7 @@ merged_diet_data_daily2 <- merged_diet_data_daily %>%
   rename(logDate=Date) %>% 
   mutate(logDate = as.character(logDate))
 vaginal.shannon <- vaginal.microbial.menses.24 %>% 
-  select(SampleID, shannon, biome_id, logDate)
+  dplyr::select(SampleID, shannon, biome_id, logDate)
 diet.vaginal.shannon <- vaginal.shannon %>% 
   left_join(merged_diet_data_daily2, by=c("biome_id", "logDate"))
 

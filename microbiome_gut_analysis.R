@@ -8,6 +8,7 @@
 library(tidyverse)
 library(vegan)
 library(viridis)
+library(phyloseq)
 
 source("~/Microbiome Thesis/functions.R")
 
@@ -168,13 +169,46 @@ fecal.microbial.menses.24 <- shannon.qr.merged.24 %>%
 fecal.microbial.menses.24 <- fecal.microbial.menses.24 %>% 
   mutate(menses_day = ifelse(menses_status %in% c(1,2,3,7,9,78), "menses", 
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA))) %>% 
-  mutate(menses_day = ifelse(is.na(menses_day), "not_menses", "menses"))
+  mutate(menses_day = ifelse(is.na(menses_day), "not_menses", menses_day))
+
+table(fecal.microbial.menses.24$menses_day)
 
 # 03/21 saved
 # write.csv(fecal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut.microbial.menses.24.csv")
 
 menses.table.df <- fecal.microbial.menses.24 %>% 
   select(biome_id, logDate, shannon, qr, max_taxa, OTU, menses_status, menses_day)
+
+
+# average shannon for each participant on menses vs. not on menses
+menses.table.df.summary <- menses.table.df %>% 
+  group_by(biome_id, menses_day) %>% 
+  summarise(avg_shannon=mean(shannon), .groups="drop") %>% 
+  pivot_wider(names_from = menses_day, values_from = avg_shannon, names_prefix = "menses_day_") %>% 
+  filter(!is.na(menses_day_not_menses) & !is.na(menses_day_menses)) 
+  # %>% select(!menses_day_NA)
+
+### Wilcox test
+wilcox.test(menses.table.df.summary$menses_day_not_menses,
+            menses.table.df.summary$menses_day_menses, paired=TRUE)
+t.test(menses.table.df.summary$menses_day_not_menses,
+       menses.table.df.summary$menses_day_menses, paired=TRUE)
+
+# Does Shannon diversity vary by menstruate/not menstruate?
+t.test(dass.participant.avg$avg_shannon ~ dass.participant.avg$person_menstruates)
+
+# Figure: Average Shannon Diversity for Participants on menses v. not
+ggplot(
+  menses.table.df.summary,
+  aes(x = menses_day_not_menses, y = menses_day_menses,
+      color=as.factor(biome_id))) +
+  geom_point() +
+  xlim(3,4)+
+  ylim(3,4)+
+  geom_abline(slope=1, intercept=0, linetype="dashed") +
+  theme_minimal() +
+  labs(x="Not Menses (Shannon)", y="Menses (Shannon)",
+       color="Participant ID")
 
 ##########################################################################################
 
@@ -278,18 +312,32 @@ for(id in participant_ids) {
 ##########################################################################################
 # Gut microbiome and menses
 
-fecal.microbial.menses.24.filtered <- fecal.microbial.menses.24 %>% 
-  filter(!is.na(survey_menstruate))
+menses_participants <- fecal.microbial.menses.24 %>% 
+  filter(menses_day=="menses")
+menses_participants <- unique(menses_participants$biome_id)
+survey_menses_participants <- fecal.microbial.menses.24 %>% 
+  filter(survey_menstruate==1)
+survey_menses_participants <- unique(survey_menses_participants$biome_id)
+menses_participants <- unique(c(menses_participants, survey_menses_participants))
+
+fecal.microbial.menses.24.filtered <- fecal.microbial.menses.24 %>%
+  mutate(
+    person_menstruates = ifelse(
+      biome_id %in% menses_participants,
+      "Menstruates",
+      "No menstruate"
+    )
+  )
 
 # Figure: scatterplot of gut microbiome shannon diversity and menses
 ggplot(fecal.microbial.menses.24.filtered, aes(x = as.Date(logDate), y = shannon)) +
-  geom_point(aes(color=as.factor(survey_menstruate))) +
-  geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(survey_menstruate))) +
+  geom_point(aes(color=as.factor(person_menstruates))) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(person_menstruates))) +
   labs(
     x = "Days", 
     y = "Shannon Diversity Index",
     title = "",
-    color="Menstruate v. No menstruate"
+    color="Menstruates v. Doesn't menstruate"
   ) +
   theme_minimal() +
   scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
@@ -360,6 +408,15 @@ shannon.birthControl.collapsed <- shannon.birthControl %>%
 
 shannon.birthControl.collapsed$birthControl_collapsed <- factor(shannon.birthControl.collapsed$birthControl_collapsed, levels=c("None", "Local P", "Systemic"))
 
+## Make full df
+shannon.birthControl.collapsed.subset <- shannon.birthControl.collapsed %>% 
+  select(biome_id, logDate, birthControl, birthControl_collapsed) %>% 
+  distinct()
+fecal.microbial.menses.24.birthControl <- fecal.microbial.menses.24 %>% 
+  left_join(shannon.birthControl.collapsed.subset, by=c("biome_id", "logDate"))
+
+## Mixed effects models
+
 lmer.shannon.bc.collapsed <- lmer(shannon~birthControl_collapsed + (1|`biome_id`), data = shannon.birthControl.collapsed)
 r2(lmer.shannon.bc.collapsed)
 summary(lmer.shannon.bc.collapsed)
@@ -416,18 +473,276 @@ summary(lm.avgshannon.bc.collapsed)
 ##########################################################################################
 
 # Menses
-full_menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+# full_menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+# 
+# # Q: how many days with fecal swabs do I have menses info for (from vaginal)
+# table(shannon.birthControl$menses_day)
 
-# Q: how many days with fecal swabs do I have menses info for (from vaginal)
-head(fecal.microbial.menses.24.filtered)
-head(full_menses_data)
+##########################################################################################
+
+## Corr with DASS data/stress
+dass <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_dass.csv")
+
+## DASS Survey completion - aggregate by week
+
+all_days <- seq.Date(as.Date(min(dass$Timestamp, na.rm=TRUE)), 
+                     as.Date(max(dass$Timestamp, na.rm=TRUE)), by = "day")
+# all_days <- as.character(all_days)
+# complete_grid <- expand.grid(biome_id = unique(dass$biome_id),
+#                              Timestamp = all_days)
+complete_grid <- expand.grid(
+  biome_id = unique(dass$biome_id),
+  Timestamp = all_days
+) %>%
+  mutate(week = cut(Timestamp, breaks = "week", start.on.monday = TRUE))
+# 
+# heatmap_data <- complete_grid %>%
+#   left_join(dass, by = c("biome_id", "Timestamp"))
+heatmap_data <- complete_grid %>%
+  left_join(dass %>% mutate(week = cut(Timestamp, breaks = "week")), 
+            by = c("biome_id", "week"))
+
+heatmap_data$Value <- ifelse(is.na(heatmap_data$stress_score),
+                             "No Survey", "Survey")
+
+heatmap_data <- heatmap_data %>% 
+  group_by(biome_id) %>%
+  mutate(survey_count = sum(Value == "Survey", na.rm = TRUE)) %>%
+  arrange(desc(survey_count), biome_id) %>% 
+  ungroup()
+
+ggplot(heatmap_data, aes(x = as.character(week), y = reorder(factor(biome_id), survey_count), fill = Value)) +
+  geom_tile(color = "gray25") +
+  scale_fill_manual(values = c("white", "darkblue"), na.value = "white", 
+                    labels = c("No survey", "Survey")) +
+  labs(title = "DASS Completion", 
+       x = "Week", 
+       y = "Biome ID", 
+       fill = "Submission") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+
+### Imputed and cleaned DASS data
+dass <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/DASS_0503_2024-final_df.csv")
+dass <- dass %>% 
+  rename(biome_id=study_id)
+
+## Aggregate
+
+# Average stress score
+dass.avg <- dass %>% 
+  group_by(biome_id) %>% 
+  summarise(
+    # avg_depr=sum(depression_score, na.rm=TRUE)/n(),
+    avg_anx=sum(anxiety_score, na.rm=TRUE)/n(),
+    avg_stress=sum(stress_score, na.rm=TRUE)/n()
+  )
+
+# average shannon diversity
+shannon.birthControl.avg <- shannon.birthControl %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon) / n(),
+            birthControl = first(birthControl))
+dass.participant.avg <- merge(shannon.birthControl.avg, dass.avg, by="biome_id")
+
+spline.obj <- smooth.spline(x=dass.participant.avg$avg_stress, y=dass.participant.avg$avg_shannon)
+spline.df <- data.frame(avg_stress=spline.obj$x,
+                        avg_shannon=spline.obj$y)
+
+# Figure: scatter plot of avg shannon idx by avg stress score, color by birth control
+ggplot(dass.participant.avg, aes(x = avg_stress, y = avg_shannon)) +
+  geom_point(aes(color=as.factor(birthControl)), size=1, alpha=1) +
+  geom_line(data=spline.df, aes(x=avg_stress, y=avg_shannon), color="orchid", linewidth=1, alpha=0.7) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Average Stress Score", y = "Average Shannon Index", title = "",
+       color = "Birth Control") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+
+# Average stress v. avg shannon diversity index, birth control
+lm.results <- dass.participant.avg %>%
+  group_by(birthControl) %>%
+  summarise(
+    model = list(lm(avg_shannon ~ avg_stress, data = cur_data())),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    slope = sapply(model, function(m) coef(m)["avg_stress"]),
+    p_value = sapply(model, function(m) summary(m)$coefficients["avg_stress", "Pr(>|t|)"])
+  ) %>%
+  select(birthControl, slope, p_value)
+
+spline.obj <- dass.participant.avg %>%
+  group_by(birthControl) %>%
+  filter(n_distinct(avg_stress) >= 4) %>%
+  summarise(
+    model = list(smooth.spline(x=avg_stress, y=avg_shannon, spar=1)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    x = map(model, ~ seq(min(.x$x), max(.x$x), length.out = 100)),
+    y = map2(model, x, ~ predict(.x, .y)$y)
+  ) %>%
+  select(birthControl, x, y) %>%
+  unnest(c(x, y))
+
+# Figure: Scatterplot of avg shannon by avg stress with splines
+ggplot(dass.participant.avg, aes(x = avg_stress, y = avg_shannon)) +
+  geom_point(aes(color=as.factor(birthControl)), size=1, alpha=1) +
+  geom_line(data = spline.obj, aes(x = x, y = y, color = birthControl), linewidth = 1) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Average Stress Score", y = "Average Shannon Diversity Index", title = "",
+       color = "Birth Control") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+
+### Alpha diversity over time, color maybe by birth control, menstruate, or both
+
+# merge df
+dass.participant <- merge(shannon.birthControl, dass.avg, by="biome_id")
+dass.participant$logDate <- as.Date(dass.participant$logDate)
+
+# Figure: scatterplot shannon over days by birth control
+ggplot(dass.participant, aes(x = logDate, y = shannon)) +
+  geom_point(aes(color=birthControl)) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = birthControl)) +
+  labs(
+    x = "Days", 
+    y = "Shannon Diversity Index",
+    title = ""
+  ) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+  scale_color_viridis_d(option="D")
+
+# Figure: scatterplot shannon over days by menses day
+ggplot(dass.participant, aes(x = logDate, y = shannon)) +
+  geom_point(aes(color=menses_day)) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = menses_day)) +
+  labs(
+    x = "Days", 
+    y = "Shannon Diversity Index",
+    title = ""
+  ) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+  scale_color_viridis_d(option="D")
+
+fecal.microbial.menses.24.menstruates <- fecal.microbial.menses.24.filtered %>% 
+  select(biome_id, person_menstruates) %>% 
+  distinct()
+dass.participant <- dass.participant %>% 
+  left_join(fecal.microbial.menses.24.menstruates, by="biome_id")
+
+dass.participant.avg <- dass.participant %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon) / n(),
+            person_menstruates = first(person_menstruates))
+
+# Figure: Scatterplot of avg shannon over time by if someone menstruates
+ggplot(dass.participant, aes(x = logDate, y = shannon)) +
+  geom_point(aes(color=person_menstruates)) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = person_menstruates)) +
+  labs(
+    x = "Days", 
+    y = "Shannon Diversity Index",
+    title = ""
+  ) +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+  scale_color_viridis_d(option="D")
+
+## Regress shannon diversity on stress + stress*birth control, if interaction terms (2) is significant
+
+# collapse birth control
+dass.participant.collapsed <- merge(shannon.birthControl.collapsed, dass.avg, by="biome_id")
+dass.participant.collapsed$birthControl_collapsed <- factor(
+  dass.participant.collapsed$birthControl_collapsed,
+  levels = c("None", "Local P", "Systemic")
+)
+
+dass.participant.collapsed.avg <- dass.participant.collapsed %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon = sum(shannon)/n(),
+            birthControl = first(birthControl),
+            birthControl_collapsed = first(birthControl_collapsed),
+            # avg_depr = first(avg_depr),
+            avg_anx = first(avg_anx),
+            avg_stress = first(avg_stress))
+
+# Regressing models
+lm.obj <- lm(avg_shannon ~ avg_stress*birthControl, data=dass.participant.collapsed.avg)
+summary(lm.obj)
+lm.obj2 <- lm(avg_shannon ~ avg_stress+birthControl, data=dass.participant.collapsed.avg)
+summary(lm.obj2)
+anova(lm.obj,lm.obj2)
+
+# Collapsed birth control
+lm.obj <- lm(avg_shannon ~ avg_stress*birthControl_collapsed, data=dass.participant.collapsed.avg)
+summary(lm.obj)
+lm.obj2 <- lm(avg_shannon ~ avg_stress+birthControl_collapsed, data=dass.participant.collapsed.avg)
+summary(lm.obj2)
+anova(lm.obj,lm.obj2)
+
+
+########################################################
+
+## Individual DASS surveys
+
+shannon.birthControl$logDate <- as.Date(shannon.birthControl$logDate)
+dass$Timestamp <- as.Date(dass$Timestamp)
+dass.filtered <- dass %>% 
+  select(!birthControl)
+
+# matching: select closest survey
+shannon.birthControl.dass <- shannon.birthControl %>%
+  left_join(dass, by = "biome_id") %>%
+  mutate(DayDifference = abs(as.numeric(logDate - Timestamp))) %>%
+  group_by(biome_id, logDate) %>% 
+  slice_min(DayDifference, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  select("biome_id", "logDate", "Timestamp", "DayDifference", everything())
+
+# Mixed effects models
+library(lme4)
+library(lmerTest)
+library(performance)
+
+# mixed effects with stress
+lmer.stress <-lmer(shannon~stress_score + 
+                     (1|`biome_id`), 
+                   data = shannon.birthControl.dass)
+r2(lmer.stress)
+summary(lmer.stress)
+
+shannon.birthControl.dass <- study_days(shannon.birthControl.dass)
+
+# mixed effects with stress and time
+lmer.stress.days <-lmer(shannon~stress_score + study_day +
+                     (1|`biome_id`), 
+                   data = shannon.birthControl.dass)
+r2(lmer.stress.days)
+summary(lmer.stress.days)
+
+anova(lmer.stress, lmer.stress.days)
+
+# mixed effects with stress and time, time^2
+lmer.stress.days2 <-lmer(shannon~stress_score + study_day +
+                          I(study_day^2) +
+                          (1|`biome_id`), 
+                        data = shannon.birthControl.dass)
+r2(lmer.stress.days2)
+summary(lmer.stress.days2)
+
+anova(lmer.stress.days, lmer.stress.days2)
+anova(lmer.stress, lmer.stress.days2)
 
 ##########################################################################################
 
 ## Diet Data
 merged_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/nutrition_withVegPerc_data_3_20.csv")
 past_two_days_diet_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/past_two_days_diet_data_3_20.csv")
-
 
 merged_diet_data <- merged_diet_data %>% 
   rename(logDate=Date) %>% 
@@ -441,6 +756,9 @@ merged_diet_data <- study_days(merged_diet_data)
 past_two_days_diet_data <- study_days(past_two_days_diet_data)
 merged_diet_data <- filter_days(merged_diet_data)
 past_two_days_diet_data <- filter_days(past_two_days_diet_data)
+
+dim(merged_diet_data) # 9332   42
+dim(past_two_days_diet_data) # 1323   19
 
 # collapse diet data
 merged_diet_data_collapsed <- merged_diet_data %>% 
@@ -465,8 +783,14 @@ merged_diet_data_collapsed <- merged_diet_data %>%
     study_day = first(study_day)
   )
 
+# add veg cols to the rolling window df
+merged_diet_data_collapsed_subset <- merged_diet_data_collapsed %>% 
+  select(biome_id, logDate, perc_veg, is_vegetarian)
+past_two_days_diet_data <- past_two_days_diet_data %>% 
+  left_join(merged_diet_data_collapsed_subset, by=c("biome_id", "logDate"))
+
 # join fecal data with diet data
-gut.diet.df <- merged_diet_data_collapsed %>% 
+gut.diet.df <- merged_diet_data_collapsed %>% # past_two_days_diet_data %>% #
   left_join(fecal.microbial.menses.24, by=c("biome_id", "logDate")) %>% 
   filter(!is.na(shannon))
 
@@ -536,8 +860,8 @@ summary(veg_perc_df_summary$avg_shannon)
 lm.obj.summary <- lm(avg_shannon ~ perc_veg, data = veg_perc_df_summary)
 summary(lm.obj.summary)
 
-lm.obj <- lm(shannon ~ perc_veg, data = gut.diet.df)
-summary(lm.obj)
+# lm.obj <- lm(shannon ~ perc_veg, data = gut.diet.df)
+# summary(lm.obj)
 
 # Join max OTU
 fecal.microbial.menses.24.OTU <- fecal.microbial.menses.24 %>% 
@@ -571,7 +895,7 @@ library(performance)
 
 nutrient.diet.22.day <- gut.diet.df %>% 
   group_by(biome_id, logDate) %>% 
-  summarise(avg_shannnon = sum(shannon, na.rm=TRUE) / n(),
+  summarise(daily_shannon = sum(shannon, na.rm=TRUE) / n(), # average the samples for the day
             caloriesall_avg = sum(caloriesall, na.rm=TRUE) / n(), # get avg cals per day
             cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
             satFat_prop = sum(saturatedFatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
@@ -591,8 +915,8 @@ nutrient.diet.22.day <- study_days(nutrient.diet.22.day)
 
 ## random intercept, fixed slopes
 
-# Full model (no avg cal)
-lmer.full <- lmer(avg_shannnon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
+# Full model
+lmer.full <- lmer(daily_shannon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
                     carb_prop + dietFib_prop + sugar_prop + protein_prop + fat_prop +
                     fat_cal_prop + addedSugarall_prop +
                     (1|`biome_id`), data = nutrient.diet.22.day)
@@ -600,7 +924,7 @@ r2(lmer.full)
 summary(lmer.full)
 
 # Time
-lmer.time.full <- lmer(avg_shannnon~study_day + caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
+lmer.time.full <- lmer(daily_shannon~study_day + caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
                     carb_prop + dietFib_prop + sugar_prop + protein_prop + fat_prop +
                     fat_cal_prop + addedSugarall_prop +
                     (1|`biome_id`), data = nutrient.diet.22.day)
@@ -610,7 +934,7 @@ summary(lmer.time.full)
 anova(lmer.full, lmer.time.full)
 
 # Time + Time^2
-lmer.time2.full <- lmer(avg_shannnon~study_day + I(study_day^2) + caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
+lmer.time2.full <- lmer(daily_shannon~study_day + I(study_day^2) + caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
                          carb_prop + dietFib_prop + sugar_prop + protein_prop + fat_prop +
                          fat_cal_prop + addedSugarall_prop +
                          (1|`biome_id`), data = nutrient.diet.22.day)
@@ -620,7 +944,7 @@ summary(lmer.time2.full)
 anova(lmer.time.full, lmer.time2.full)
 
 # Check vegetarian variable
-lmer.full.veg <- lmer(avg_shannnon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
+lmer.full.veg <- lmer(daily_shannon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
                         carb_prop + dietFib_prop + sugar_prop + protein_prop + fat_prop +
                         perc_veg +
                         fat_cal_prop + addedSugarall_prop +
@@ -628,7 +952,7 @@ lmer.full.veg <- lmer(avg_shannnon~caloriesall_avg + cholesterol_prop + satFat_p
 r2(lmer.full.veg)
 summary(lmer.full.veg)
 
-lmer.full.veg <- lmer(avg_shannnon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
+lmer.full.veg <- lmer(daily_shannon~caloriesall_avg + cholesterol_prop + satFat_prop + sodium_prop +
                         carb_prop + dietFib_prop + sugar_prop + protein_prop + fat_prop +
                         is_vegetarian +
                         fat_cal_prop + addedSugarall_prop +
@@ -723,5 +1047,272 @@ lmer_genus <- lmer(Abundance ~ study_day + Abundance + (1 | biome_id), data = ge
 summary(lmer_genus)
 
 ##########################################################################################
+
+## Activity
+
+activity.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
+activity.data <- activity.data %>% 
+  filter(!is.na(as.numeric(biome_id)))
+activity.data <- study_days(activity.data)
+
+# gut microbiome data
+dim(fecal.microbial.menses.24.filtered)
+
+# join by date and participant
+fecal.microbial.menses.24.activity <- fecal.microbial.menses.24.filtered %>% 
+  left_join(activity.data, by=c("biome_id", "logDate"))
+
+### Summarize activity data
+activity.data.summary <- activity.data %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_cals_burned = sum(calories_burned) / n(),
+            avg_steps = sum(steps) / n(),
+            avg_distance = sum(distance) / n(),
+            avg_minutes_sedentary = sum(minutes_sedentary) / n(),
+            avg_minutes_lightly_active = sum(minutes_lightly_active) / n(),
+            avg_minutes_fairly_active = sum(minutes_fairly_active) / n(),
+            avg_minues_very_active = sum(minues_very_active) / n(),
+            avg_activity_calories = sum(activity_calories) / n(),
+            total_min_active = sum(minutes_lightly_active, minutes_fairly_active, minues_very_active) / n()
+  )
+fecal.microbial.menses.24.summary <- fecal.microbial.menses.24.filtered %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon=sum(shannon)/n())
+
+activity.data.summary <- fecal.microbial.menses.24.summary %>% 
+  left_join(activity.data.summary, by="biome_id")
+
+
+# steps
+lm.shannon.activity <- lm(avg_shannon ~ avg_steps, data = activity.data.summary)
+summary(lm.shannon.activity)
+# total cals burned - significant
+lm.shannon.activity <- lm(avg_shannon ~ avg_cals_burned, data = activity.data.summary)
+summary(lm.shannon.activity)
+# activity cals burned 
+lm.shannon.activity <- lm(avg_shannon ~ avg_activity_calories, data = activity.data.summary)
+summary(lm.shannon.activity)
+# distance burned 
+lm.shannon.activity <- lm(avg_shannon ~ avg_distance, data = activity.data.summary)
+summary(lm.shannon.activity)
+# minutes sedentary
+lm.shannon.activity <- lm(avg_shannon ~ avg_minutes_sedentary, data = activity.data.summary)
+summary(lm.shannon.activity)
+# minutes lightly active
+lm.shannon.activity <- lm(avg_shannon ~ avg_minutes_lightly_active, data = activity.data.summary)
+summary(lm.shannon.activity)
+# minutes fairly active
+lm.shannon.activity <- lm(avg_shannon ~ avg_minutes_fairly_active, data = activity.data.summary)
+summary(lm.shannon.activity)
+# minutes very active
+lm.shannon.activity <- lm(avg_shannon ~ avg_minues_very_active, data = activity.data.summary)
+summary(lm.shannon.activity)
+
+## Mixed Effects Model
+library(lme4)
+library(lmerTest)
+
+## Different baseline, same slope, different intercept
+
+source("~/Microbiome Thesis/functions.R")
+
+fixed_list <- c("steps", "distance", "calories_burned", "minutes_sedentary", "minutes_lightly_active",
+                "minutes_fairly_active", "minues_very_active", "activity_calories")
+
+lmer.models <- mixed_effects_fixed_slope(fecal.microbial.menses.24.activity, 10, "shannon", fixed_list)
+
+r2(lmer.models$steps)
+r2(lmer.models$distance)
+r2(lmer.models$calories_burned)
+r2(lmer.models$minutes_sedentary)
+r2(lmer.models$minutes_lightly_active)
+r2(lmer.models$minutes_fairly_active)
+r2(lmer.models$minues_very_active)
+r2(lmer.models$activity_calories)
+
+summary(lmer.models$steps)
+summary(lmer.models$distance)
+summary(lmer.models$calories_burned)
+summary(lmer.models$minutes_sedentary)
+summary(lmer.models$minutes_lightly_active)
+summary(lmer.models$minutes_fairly_active)
+summary(lmer.models$minues_very_active)
+summary(lmer.models$activity_calories)
+
+## random intercepts, random slops
+rnd.slope.lmer.models <- mixed_effects_rnd_slope(fecal.microbial.menses.24.activity, 10, "shannon", fixed_list)
+
+r2(rnd.slope.lmer.models$steps)
+r2(rnd.slope.lmer.models$distance)
+r2(rnd.slope.lmer.models$calories_burned)
+r2(rnd.slope.lmer.models$minutes_sedentary)
+r2(rnd.slope.lmer.models$minutes_lightly_active)
+r2(rnd.slope.lmer.models$minutes_fairly_active)
+r2(rnd.slope.lmer.models$minues_very_active)
+r2(rnd.slope.lmer.models$activity_calories)
+
+summary(rnd.slope.lmer.models$steps)
+summary(rnd.slope.lmer.models$distance)
+summary(rnd.slope.lmer.models$calories_burned)
+summary(rnd.slope.lmer.models$minutes_sedentary)
+summary(rnd.slope.lmer.models$minutes_lightly_active)
+summary(rnd.slope.lmer.models$minutes_fairly_active)
+summary(rnd.slope.lmer.models$minues_very_active)
+summary(rnd.slope.lmer.models$activity_calories)
+
+# full model - fixed slopes, rnd intercepts
+lmer.full <- lmer(shannon~steps + distance +
+                    calories_burned + minutes_sedentary + minutes_lightly_active +
+                    minutes_fairly_active + minues_very_active + activity_calories +
+                    (1|`biome_id`), 
+                  data = fecal.microbial.menses.24.activity)
+r2(lmer.full)
+summary(lmer.full)
+
+# full model - random slopes, rnd intercepts
+rnd.slope.lmer.full <- lmer(shannon~ steps + (steps||`biome_id`) + 
+                              distance + (distance||`biome_id`) +
+                              calories_burned + (calories_burned||`biome_id`) +
+                              minutes_sedentary + (minutes_sedentary||`biome_id`) +
+                              minutes_lightly_active + (minutes_lightly_active||`biome_id`) +
+                              minutes_fairly_active + (minutes_fairly_active||`biome_id`) +
+                              minues_very_active + (minues_very_active||`biome_id`) +
+                              activity_calories + (activity_calories||`biome_id`),
+                            data = fecal.microbial.menses.24.activity)
+r2(rnd.slope.lmer.full)
+
+anova(lmer.full, rnd.slope.lmer.full)
+
+## Time
+activity.time.model <- lmer(shannon ~ study_day + steps +
+                              distance + calories_burned + minutes_sedentary +
+                              minutes_lightly_active + minutes_fairly_active +
+                              minues_very_active + activity_calories +
+                              + (1 | biome_id),
+                            data = fecal.microbial.menses.24.activity)
+r2(activity.time.model)
+summary(activity.time.model)
+anova(lmer.full, activity.time.model)
+
+## Time + Time^2
+activity.time2.model <- lmer(shannon ~ study_day + I(study_day^2) + steps +
+                              distance + calories_burned + minutes_sedentary +
+                              minutes_lightly_active + minutes_fairly_active +
+                              minues_very_active + activity_calories +
+                              + (1 | biome_id),
+                            data = fecal.microbial.menses.24.activity)
+r2(activity.time2.model)
+summary(activity.time2.model)
+anova(activity.time.model, activity.time2.model)
+
+## check if student athlete matters
+participant.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header = TRUE)
+
+participant.data <- participant.data %>% 
+  mutate(sport_collapsed = ifelse(sport=="In-Season", sport, "Not In-Season")) %>%
+  # mutate(sport_collapsed = ifelse(sport=="In-Season" | sport == "Club", "Activly in Sport", "Not In-Season")) %>%
+  select(biome_id, logDate, activity_level, sport, sport_collapsed, field_hockey)
+
+activity.sport.summary <- activity.data.summary %>% 
+  left_join(participant.data, by="biome_id") %>% 
+  filter(!is.na(sport))
+
+# Figure: boxplot of sannon diversity by sports type
+ggplot(activity.sport.summary, aes(x = sport, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+# testing
+aov_sport <- aov(avg_shannon ~ sport, data = activity.sport.summary)
+summary(aov_sport)
+
+## Sports collapsed
+
+# Figure: boxplot of sannon diversity by collapsed sports
+ggplot(activity.sport.summary, aes(x = sport_collapsed, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+t.test(avg_shannon ~ sport_collapsed, data=activity.sport.summary)
+wilcox.test(avg_shannon ~ sport_collapsed, data = activity.sport.summary)
+
+### Minutes active 
+lm.shannon.activity <- lm(avg_shannon ~ total_min_active, data = activity.data.summary)
+summary(lm.shannon.activity)
+
+## field hockey team
+activity.sport.summary2 <- activity.sport.summary %>% 
+  mutate(field_hockey=ifelse(field_hockey==TRUE, "fieldHockey", 
+                             ifelse(sport_collapsed=="In-Season",
+                                    "In-Season", "Off-Season")))
+
+# Figure: boxplot of sannon diversity by field hockey
+ggplot(activity.sport.summary2, aes(x = field_hockey, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+t.test(avg_shannon ~ field_hockey, data=activity.sport.summary)
+wilcox.test(avg_shannon ~ field_hockey, data = activity.sport.summary)
+
+
+## Levels of activity
+activity.data.summary.levels <- activity.data.summary %>% 
+  mutate(exercise_level = case_when(
+    total_min_active <= quantile(total_min_active, 0.25, na.rm = TRUE) ~ "Low",
+    total_min_active <= quantile(total_min_active, 0.50, na.rm = TRUE) ~ "Moderate",
+    total_min_active <= quantile(total_min_active, 0.75, na.rm = TRUE) ~ "High",
+    TRUE ~ "Very High"
+  ))
+
+activity.data.summary.levels <- activity.data.summary.levels %>% 
+  left_join(participant.data, by="biome_id") %>% 
+  filter(!is.na(sport))
+activity.data.summary.levels$exercise_level <- factor(activity.data.summary.levels$exercise_level, levels = c("Low", "Moderate", "High", "Very High"), ordered = TRUE)
+
+table(activity.data.summary.levels$exercise_level)
+table(activity.data.summary.levels$exercise_level, activity.data.summary.levels$sport)
+
+## Sports collapsed
+
+# Figure: boxplot of sannon diversity by activity levels
+ggplot(activity.data.summary.levels, aes(x = exercise_level, y = avg_shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  labs(
+    x = " ", 
+    y = "Average Shannon Diversity", 
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+# testing
+aov_sport <- aov(avg_shannon ~ exercise_level, data = activity.data.summary.levels)
+summary(aov_sport)
+
+
+
+
 
 

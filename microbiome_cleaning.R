@@ -10,6 +10,10 @@ samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_sampl
 bacterial_otu_table <- otu_table(bacterial.data)
 bacterial_tax_table <- tax_table(bacterial.data)
 
+dim(samples.data)
+length(unique(samples.data$biome_id))
+dim(uminn_data)
+
 ## Metadata
 uminn_data <- uminn_data %>% 
   select(Sample.ID, Special.Notes) %>% 

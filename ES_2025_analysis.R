@@ -1,7 +1,7 @@
 ########################
 #
 # ES Abstract Code
-# Last updated: 03/18/2025
+# Last updated: 03/31/2025
 # data saved from microbiome_vaginal_analysis.R
 #
 #########################
@@ -24,7 +24,7 @@ participant.data <- participant.data %>%
 
 # select birth control
 birthControl.df <- participant.data %>% 
-  select(biome_id, birthControl)
+  dplyr::select(biome_id, birthControl)
 birthControl.collapsed <- birthControl.df %>% 
   count(birthControl, name="frequency")
 
@@ -50,7 +50,9 @@ shannon.birthControl <- shannon.birthControl %>%
 # Collapse by person 
 shannon.birthControl.collapsed <- shannon.birthControl %>% 
   group_by(biome_id) %>% 
-  summarise()
+  summarise(avg_shannon = sum(shannon)/n(),
+            CST_max = first(CST_max),
+            birthControl = first(birthControl))
 
 table(shannon.birthControl$CST)
 table(shannon.birthControl.collapsed$CST_max)
@@ -62,13 +64,16 @@ table(shannon.birthControl.collapsed$CST_max, shannon.birthControl.collapsed$bir
 birthControl.CST.table <- table(shannon.birthControl.collapsed$CST_max, shannon.birthControl.collapsed$birthControl)
 heatmap.mtx <- as.matrix(birthControl.CST.table)
 
+# heatmap of cst assignment and birth control
 pheatmap(heatmap.mtx,
          cluster_rows = FALSE,   
          cluster_cols = FALSE,   
          display_numbers = TRUE, 
          number_format = "%.0f",
          main = "CST Assignment v. Birth Control",
-         color = brewer.pal(9, "YlGnBu"))
+         color = brewer.pal(9, "YlGnBu"),
+         angle_col=315)
+
 # heatmap of birth control to CST (all samples)
 table(shannon.birthControl$CST, shannon.birthControl$birthControl)
 birthControl.CST.table2 <- table(shannon.birthControl$CST, shannon.birthControl$birthControl)
@@ -102,7 +107,7 @@ ggplot(shannon.birthControl, aes(x = birthControl, y = shannon)) +
   labs(x = "Contraceptive", y = "Shannon Diversity Index", title = "",
        color = "Biome ID") +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
-
+# 
 # ggplot(shannon.birthControl, aes(x = birthControl, y = shannon)) +
 #   geom_boxplot() +
 #   labs(x = "Contraceptive", y = "Shannon Diversity Index", title = "") +
@@ -111,7 +116,7 @@ ggplot(shannon.birthControl, aes(x = birthControl, y = shannon)) +
 #                                         c("Local P", "Systemic Combined (E&P)"),
 #                                         c("None", "Systemic Combined (E&P)"),
 #                                         c("None", "Systemic P only"),
-#                                         c("Systemic Combined (E&P)", "Systemic P only")), 
+#                                         c("Systemic Combined (E&P)", "Systemic P only")),
 #                      method = "wilcox.test") +
 #   theme_minimal()
 
@@ -128,7 +133,7 @@ ggplot(shannon.birthControl.avg, aes(x = birthControl, y = avg_shannon)) +
   scale_color_viridis_d(option="D") +
   labs(x = "Contraceptive", y = "Average Shannon Diversity Index", title = "",
        color = "Biome ID") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
 
 # Figure: boxplot of shannon diversity by CST cluster
 ggplot(shannon.birthControl, aes(x = CST, y = shannon)) +
@@ -142,92 +147,229 @@ ggplot(shannon.birthControl, aes(x = CST, y = shannon)) +
 
 ########################################################
 ## Corr with DASS data/stress
-dass <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/DASS-21-Cleaning - CLEAN.csv")
+# dass <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_dass.csv")
 
-# ------------------------------------------------------------------------------
-# calculate depression, anxiety, and stress scores 
-# ------------------------------------------------------------------------------
-dass$Timestamp <- as.Date(dass$Timestamp, format="%m/%d/%y", tz="UTC")
-id_values <- unique(dass$study_id) 
-time_values <- sort(unique(dass$Timestamp))
-num_time_values <- as.numeric(time_values)
-dass <- dass[order(dass$Timestamp),]
+## WHEN RERUN - USE THIS INSTEAD 03/22
+dass <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/DASS_0503_2024-final_df.csv")
+dass <- dass %>%
+  rename(biome_id=study_id)
 
-#Remove any values that occurred after 12/16 (end of semester)
-dass <- dass[dass$Timestamp<= 19342, ]
+# average stress score
+dass.avg <- dass %>% 
+  group_by(biome_id) %>% 
+  summarise(
+    #avg_depr=sum(depression_score)/n(),
+    #avg_anx=sum(anxiety_score)/n(),
+    avg_stress=sum(stress_score)/n()
+  )
 
-dass$week <- rep(NA, nrow(dass))
-dass$week[dass$Timestamp >= 19276 & dass$Timestamp <= 19280] <- 1
-dass$week[dass$Timestamp >= 19281 & dass$Timestamp <= 19286] <- 2
-dass$week[dass$Timestamp >= 19290 & dass$Timestamp <= 19293] <- 3
-dass$week[dass$Timestamp >= 19296 & dass$Timestamp <= 19300] <- 4
-dass$week[dass$Timestamp >= 19302 & dass$Timestamp <= 19308] <- 5
-dass$week[dass$Timestamp >= 19312 & dass$Timestamp <= 19315] <- 6
-dass$week[dass$Timestamp >= 19319 & dass$Timestamp <= 19321] <- 7
-dass$week[dass$Timestamp >= 19323 & dass$Timestamp <= 19329] <- 8
-dass$week[dass$Timestamp >= 19330 & dass$Timestamp <= 19336] <- 9
-dass$week[dass$Timestamp >= 19339] <- 10
+# merge df
+# dass.participant <- merge(shannon.birthControl.collapsed, dass.avg, by=study_id)
+dass.participant <- merge(shannon.birthControl, dass.avg, by="biome_id")
+dass.participant.collapsed <- merge(shannon.birthControl.collapsed, dass.avg, by="biome_id")
 
-dass <- dass %>% 
-  filter(!is.na(week))
+length(unique(dass.participant.collapsed$biome_id))
 
-dass$depression_score <- rep(NA, nrow(dass))
-dass$anxiety_score <- rep(NA, nrow(dass))
-dass$stress_score <- rep(NA, nrow(dass))
-id_values <- unique(dass$study_id) 
-for(id in id_values){
-  for(week in 1:10){
-    dass$depression_score[dass$study_id==id & dass$week==week] <- 2*sum(dass$noPositiveFeeling[dass$study_id==id & dass$week==week] + dass$initiative[dass$study_id==id & dass$week==week] + dass$noLookForward[dass$study_id==id & dass$week==week] + 
-                                                                          dass$downhearted[dass$study_id==id & dass$week==week] + dass$noEnthusiasm[dass$study_id==id & dass$week==week] + dass$feelWorthless[dass$study_id==id & dass$week==week] + 
-                                                                          dass$lifeMeaningless[dass$study_id==id & dass$week==week], na.rm=TRUE)
-    
-    dass$anxiety_score[dass$study_id==id & dass$week==week] <- 2*sum(dass$mouthDry[dass$study_id==id & dass$week==week] + dass$difficultyBreathing[dass$study_id==id & dass$week==week] + dass$trembling[dass$study_id==id & dass$week==week] + 
-                                                                       dass$panicSituation[dass$study_id==id & dass$week==week] + dass$closeToPanic[dass$study_id==id & dass$week==week] + 
-                                                                       dass$awareHeart[dass$study_id==id & dass$week==week] + dass$scared[dass$study_id==id & dass$week==week], na.rm=TRUE)
-    
-    dass$stress_score[dass$study_id==id & dass$week==week] <- 2*sum(dass$windDown[dass$study_id==id  & dass$week==week] + dass$overreact[dass$study_id==id & dass$week==week] + dass$nervous[dass$study_id==id & dass$week==week] + 
-                                                                      dass$agitated[dass$study_id==id & dass$week==week] + dass$difficultyRelax[dass$study_id==id & dass$week==week] + 
-                                                                      dass$intolerant[dass$study_id==id & dass$week==week] + dass$touchy[dass$study_id==id & dass$week==week], na.rm=TRUE)
-  }
-}
+# participants with stress score data
+dim(dass)
+length(unique(dass$biome_id))
+dass.summary <- dass %>% 
+  group_by(biome_id) %>% 
+  summarise(count = n())
+summary(dass.summary$count)
+table(dass.summary$count)
 
-#creation of variables to categorize scores into level of severity 
-dass$depressionseverity <- rep(NA, nrow(dass))
-dass$anxietyseverity <- rep(NA, nrow(dass))
-dass$stressseverity<- rep(NA, nrow(dass))
+# Stress: stress score over time
+ggplot(dass, aes(x = factor(biome_id), y = stress_score)) +
+  geom_boxplot(fill="orchid") +
+  # scale_fill_viridis_d(option = "plasma", guide = "none") +
+  labs(x = "Participant", y = "Weekly Stress Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
 
-dass$depressionseverity[dass$depression_score>=0 & dass$depression_score<=9] <- 0 
-dass$depressionseverity[dass$depression_score>=10 & dass$depression_score<=13] <- 1 
-dass$depressionseverity[dass$depression_score>=14 & dass$depression_score<=20] <- 2
-dass$depressionseverity[dass$depression_score>=21 & dass$depression_score<=27] <- 3
-dass$depressionseverity[dass$depression_score>=28] <- 4
+# Stress: stress score over time
+ggplot(dass, aes(x = as.factor(Timestamp), y = stress_score, group = as.factor(biome_id), color = as.factor(biome_id))) +
+  geom_line() +
+  geom_point() + 
+  labs(x = "Sample Submission Date", y = "Weekly Stress Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  theme(legend.position = "none")
 
-dass$anxietyseverity[dass$anxiety_score>=0 & dass$anxiety_score<=7] <- 0
-dass$anxietyseverity[dass$anxiety_score>=8 & dass$anxiety_score<=9] <- 1
-dass$anxietyseverity[dass$anxiety_score>=10 & dass$anxiety_score<=14] <- 2
-dass$anxietyseverity[dass$anxiety_score>=15 & dass$anxiety_score<=19] <- 3
-dass$anxietyseverity[dass$anxiety_score>=20] <- 4
+#### Join microbiome and stress data
 
+shannon.birthControl.mod <- shannon.birthControl %>% 
+  mutate(logDate = as.Date(logDate)) %>% 
+  select(-c(X, status))
+
+# add stress severity
 dass$stressseverity[dass$stress_score>=0 & dass$stress_score<=14] <- 0
 dass$stressseverity[dass$stress_score>=15 & dass$stress_score<=18] <- 1
 dass$stressseverity[dass$stress_score>=19 & dass$stress_score<=25] <- 2
 dass$stressseverity[dass$stress_score>=26 & dass$stress_score<=33] <- 3
 dass$stressseverity[dass$stress_score>=34] <- 4
 
-# average stress score
-dass.avg <- dass %>% 
-  group_by(study_id) %>% 
-  summarise(
-    avg_depr=sum(depression_score)/n(),
-    avg_anx=sum(anxiety_score)/n(),
-    avg_stress=sum(stress_score)/n()
-  ) %>% 
-  rename(biome_id=study_id)
+dass2 <- dass %>% 
+  mutate(Timestamp = as.Date(Timestamp)) %>% 
+  rename(mood_date = Timestamp) %>% 
+  select(biome_id, week, mood_date, stress_score, stressseverity, cisWoman, sport, probiotic, sexuallyActive)
 
-# merge df
-# dass.participant <- merge(shannon.birthControl.collapsed, dass.avg, by=study_id)
-dass.participant <- merge(shannon.birthControl, dass.avg, by="biome_id")
-dass.participant.collapsed <- merge(shannon.birthControl.collapsed, dass.avg, by="biome_id")
+shannon.dass <- shannon.birthControl.mod %>%
+  left_join(dass2, by = c("biome_id")) %>%
+  mutate(
+    diff_days = abs(as.numeric(difftime(logDate, mood_date, units = "days")))
+  ) %>%
+  group_by(biome_id, logDate) %>%
+  # keep closest survey
+  filter(diff_days == min(diff_days)) %>%
+  ungroup() %>%
+  # only keep within 7 day survey
+  mutate(stress_score = ifelse(diff_days > 7, NA, stress_score))
+dim(shannon.dass)
+
+# filter for dupes
+dupes <- shannon.dass %>% 
+  filter(duplicated(SampleID) | duplicated(SampleID, fromLast=TRUE))
+dim(dupes) # 104 dupes, surveys are same days apart
+
+unique_pairs <- dupes %>% 
+  group_by(biome_id, SampleID) %>% 
+  count()
+dim(unique_pairs)
+
+# add week - join sulogDate# add week - join survey for that given week
+# shannon.dass$sampleWeek <- rep(NA, nrow(shannon.dass))
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19276 & shannon.dass$logDate <= 19280] <- 1
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19281 & shannon.dass$logDate <= 19286] <- 2
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19290 & shannon.dass$logDate <= 19293] <- 3
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19296 & shannon.dass$logDate <= 19300] <- 4
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19302 & shannon.dass$logDate <= 19308] <- 5
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19312 & shannon.dass$logDate <= 19315] <- 6
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19319 & shannon.dass$logDate <= 19321] <- 7
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19323 & shannon.dass$logDate <= 19329] <- 8
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19330 & shannon.dass$logDate <= 19336] <- 9
+# shannon.dass$sampleWeek[shannon.dass$logDate >= 19339] <- 10
+# table(shannon.dass$sampleWeek)
+
+dupes$sampleWeek <- rep(NA, nrow(dupes))
+dupes$sampleWeek[dupes$logDate >= 19276 & dupes$logDate <= 19280] <- 1
+dupes$sampleWeek[dupes$logDate >= 19281 & dupes$logDate <= 19286] <- 2
+dupes$sampleWeek[dupes$logDate >= 19290 & dupes$logDate <= 19293] <- 3
+dupes$sampleWeek[dupes$logDate >= 19296 & dupes$logDate <= 19300] <- 4
+dupes$sampleWeek[dupes$logDate >= 19302 & dupes$logDate <= 19308] <- 5
+dupes$sampleWeek[dupes$logDate >= 19312 & dupes$logDate <= 19315] <- 6
+dupes$sampleWeek[dupes$logDate >= 19319 & dupes$logDate <= 19321] <- 7
+dupes$sampleWeek[dupes$logDate >= 19323 & dupes$logDate <= 19329] <- 8
+dupes$sampleWeek[dupes$logDate >= 19330 & dupes$logDate <= 19336] <- 9
+dupes$sampleWeek[dupes$logDate >= 19339] <- 10
+table(dupes$sampleWeek)
+
+dupes.filtered <- dupes %>%
+  filter(week==sampleWeek) %>%
+  ungroup()
+dim(dupes.filtered)
+
+# take out dupes
+shannon.dass.filtered <- shannon.dass %>%
+  anti_join(dupes)
+dim(shannon.dass.filtered)
+dim(shannon.dass)
+
+# add back unique
+shannon.dass.filtered <- shannon.dass.filtered %>% 
+  left_join(dupes.filtered)
+dim(shannon.dass.filtered) # 1432   22
+
+# Stress: shannon by stress score
+ggplot(shannon.dass.filtered, aes(x = stress_score, y = shannon, col=as.factor(biome_id))) +
+  geom_point(fill="orchid") +
+  labs(x = "Weekly Stress Score", y = "Shannon") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+length(unique(shannon.dass.filtered$biome_id))
+length(!is.na(shannon.dass.filtered$stressseverity))
+table(shannon.dass.filtered$stressseverity)
+
+# Stress: shannon by stress severity category
+ggplot(shannon.dass.filtered, aes(x = factor(stressseverity), y = shannon, col=as.factor(biome_id))) +
+  geom_boxplot(fill = "white", color = "black") + 
+  geom_point(position = position_jitter(width = 0.4, height = 0), alpha = 0.7) +
+  labs(x = "Stress Level", y = "Shannon Diversity") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c("0" = "Normal", "1" = "Mild", "2" = "Moderate", "3" = "Severe", "4" = "Extremely Severe")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+## Mixed effects models
+library(lme4)
+library(lmerTest)
+library(performance)
+
+lmer.full <- lmer(shannon ~ stress_score + (1 | `biome_id`), data=shannon.dass.filtered)
+r2(lmer.full)
+summary(lmer.full)
+
+lmer.full <- lmer(shannon ~ stress_score + (stress_score || `biome_id`), data=shannon.dass.filtered)
+r2(lmer.full)
+summary(lmer.full)
+
+## Analysis with birth control
+dim(shannon.dass.filtered)
+shannon.dass.filtered.na <- shannon.dass.filtered %>%
+  drop_na(stress_score, shannon)
+length(unique(shannon.dass.filtered.na$biome_id))
+dim(shannon.dass.filtered.na)
+
+# Stress: scatterplot stress v. shannon diversity index, birthControl
+spline.obj <- shannon.dass.filtered %>%
+  drop_na(stress_score, shannon) %>%
+  group_by(birthControl) %>%
+  summarise(
+    model = list(smooth.spline(x=stress_score, y=shannon, spar=NULL)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    x = map(model, ~ as.numeric(.x$x)),
+    y = map(model, ~ as.numeric(.x$y))
+  ) %>%
+  dplyr::select(birthControl, x, y) %>%
+  unnest(c(x, y))
+
+ggplot(shannon.dass.filtered, aes(x = stress_score, y = shannon)) +
+  geom_jitter(aes(color=as.factor(birthControl)), size=1, alpha=0.6) +
+  geom_line(data = spline.obj, aes(x = x, y = y, color = birthControl), linewidth = 1) +
+  scale_color_viridis_d(option="D") +
+  labs(x = "Weekly Stress Score", y = "Shannon Diversity Index", title = "",
+       color = "Birth Control") +
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
+
+# Stress: stress score and shannon by CST with splines
+table(shannon.dass.filtered$CST)
+spline.obj <- shannon.dass.filtered %>%
+  drop_na(stress_score, shannon) %>%
+  group_by(CST) %>%
+  summarise(
+    model = list(smooth.spline(x=stress_score, y=shannon, spar=NULL)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    x = map(model, ~ as.numeric(.x$x)),
+    y = map(model, ~ as.numeric(.x$y))
+  ) %>%
+  dplyr::select(CST, x, y) %>%
+  unnest(c(x, y))
+ggplot(shannon.dass.filtered, aes(x = stress_score, y = shannon, col=CST)) +
+  # geom_point(fill="orchid") +
+  geom_jitter(aes(color=as.factor(CST)), size=1, alpha=0.6) +
+  geom_line(data = spline.obj, aes(x = x, y = y, color = CST), linewidth = 1) +
+  labs(x = "Weekly Stress Score", y = "Shannon",
+       color="CST") +
+  theme_minimal() +
+  scale_color_viridis_d(option="D") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+## aggregate results
 
 spline.obj <- smooth.spline(x=dass.participant.collapsed$avg_stress, y=dass.participant.collapsed$avg_shannon)
 spline.df <- data.frame(avg_stress=spline.obj$x,
@@ -266,7 +408,7 @@ spline.obj <- dass.participant %>%
     # x = map(model, ~ seq(min(.x$x), max(.x$x), length.out = 100)),
     # y = map2(model, x, ~ predict(.x, .y)$y)
   ) %>%
-  select(CST, x, y) %>%
+  dplyr::select(CST, x, y) %>%
   unnest(c(x, y))
 
 ggplot(dass.participant, aes(x = avg_stress, y = avg_shannon)) +
@@ -287,13 +429,11 @@ spline.obj <- dass.participant.collapsed %>%
     .groups = "drop"
   ) %>%
   mutate(
-    # x = map(model, ~ as.numeric(.x$x)),
-    # y = map(model, ~ as.numeric(.x$y))
     # smoother representation
     x = map(model, ~ seq(min(.x$x), max(.x$x), length.out = 100)),
     y = map2(model, x, ~ predict(.x, .y)$y)
   ) %>%
-  select(CST_max, x, y) %>%
+  dplyr::select(CST_max, x, y) %>%
   unnest(c(x, y))
 
 ggplot(dass.participant.collapsed, aes(x = avg_stress, y = avg_shannon)) +
@@ -316,7 +456,7 @@ lm.results <- dass.participant %>%
     slope = sapply(model, function(m) coef(m)["avg_stress"]),
     p_value = sapply(model, function(m) summary(m)$coefficients["avg_stress", "Pr(>|t|)"])
   ) %>%
-  select(birthControl, slope, p_value)
+  dplyr::select(birthControl, slope, p_value)
 
 spline.obj <- dass.participant %>%
   group_by(birthControl) %>%
@@ -329,7 +469,7 @@ spline.obj <- dass.participant %>%
     x = map(model, ~ seq(min(.x$x), max(.x$x), length.out = 100)),
     y = map2(model, x, ~ predict(.x, .y)$y)
   ) %>%
-  select(birthControl, x, y) %>%
+  dplyr::select(birthControl, x, y) %>%
   unnest(c(x, y))
 
 ggplot(dass.participant, aes(x = avg_stress, y = avg_shannon)) +
@@ -343,6 +483,7 @@ ggplot(dass.participant, aes(x = avg_stress, y = avg_shannon)) +
 ### Alpha diversity over time, color maybe by birth control, menstruate, or both
 dass.participant$logDate <- as.Date(dass.participant$logDate)
 
+# Figure: shannon diversity over time for CSTs
 ggplot(dass.participant, aes(x = logDate, y = shannon)) +
   geom_point(aes(color=CST)) +
   geom_smooth(method = "lm", se=FALSE, aes(color = CST)) +
@@ -358,6 +499,7 @@ ggplot(dass.participant, aes(x = logDate, y = shannon)) +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
   scale_color_viridis_d(option="D")
 
+# Menses: shannon and contraceptive by CST
 ggplot(dass.participant, aes(x = birthControl, y = shannon)) +
   geom_jitter(aes(color=as.factor(CST)), size=1, alpha=0.6) +
   geom_point(aes(color=as.factor(CST)), size=1, alpha=0.7) +
@@ -366,7 +508,7 @@ ggplot(dass.participant, aes(x = birthControl, y = shannon)) +
   scale_color_viridis_d(option="D") +
   labs(x = "Contraceptive", y = "Shannon Diversity Index", title = "",
        color = "CST") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1))
 
 ggplot(dass.participant.collapsed, aes(x = birthControl, y = avg_shannon)) +
   geom_jitter(aes(color=as.factor(CST_max)), size=1, alpha=0.6) +
@@ -427,9 +569,9 @@ shannon.birthControl$week[shannon.birthControl$Timestamp >= 19339] <- 10
 table(shannon.birthControl$week)
 
 shannon.birthControl <- shannon.birthControl %>% 
-  select(!Timestamp)
+  dplyr::select(!Timestamp)
 dass <- dass %>% 
-  select(!biome_id) %>% 
+  dplyr::select(!biome_id) %>% 
   rename(biome_id=study_id)
 
 # Collapse shannon.birthControl by week
@@ -515,30 +657,59 @@ anova(lmer.time.full, lmer.time2.full)
 
 ########################################################
 ## Corr with menstruation
-participant.dass <- merge(participant.data, dass.avg, by = "biome_id")
-participant.dass <- participant.dass %>% 
-  select(!logDate)
-shannon.birthControl.subset<- shannon.birthControl %>% 
-  select(shannon, CST, biome_id, avg_shannon, logDate)
-participant.dass <- shannon.birthControl.subset %>% 
-  left_join(participant.dass, by = "biome_id")
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+menses.data$logDate <- as.Date(menses.data$logDate)
 
-participant.dass$logDate <- as.Date(participant.dass$logDate)
-# person 31 menstruates, must've not submitted any samples
-participant.dass[which(is.na(participant.dass$survey_menstruate)),]$survey_menstruate <- 1
-participant.dass <- participant.dass %>% 
-  filter(biome_id!="31")
+# RELABELED DATA
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_3_11.csv")
+menses.data <- menses.data %>% 
+  rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
+  rename_with(~gsub("\\.", "-", .))
 
-ggplot(participant.dass, aes(x = logDate, y = shannon)) +
-  geom_point(aes(color=as.factor(survey_menstruate))) +
-  geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(survey_menstruate))) +
-  # geom_point(aes(color=birthControl)) +
-  # geom_smooth(method = "lm", se=FALSE, aes(color = birthControl)) +
+# Reshape
+menses.data.long <- menses.data %>% 
+  pivot_longer(cols=starts_with("2022-"), names_to="logDate", values_to="menses_status")
+menses.data.long <- menses.data.long %>% 
+  mutate(menstruate = ifelse(menses_status %in% c(1,2,3,7,9), "Menstruating", "Not menstruating"),
+         logDate = as.Date(logDate))
+# participant.dass <- merge(participant.data, dass.avg, by = "biome_id")
+# participant.dass <- participant.dass %>% 
+#   dplyr::select(!logDate)
+# shannon.birthControl.subset<- shannon.birthControl %>% 
+#   dplyr::select(shannon, CST, biome_id, avg_shannon, logDate)
+# participant.dass <- shannon.birthControl.subset %>% 
+#   left_join(participant.dass, by = "biome_id")
+# 
+# participant.dass$logDate <- as.Date(participant.dass$logDate)
+# # person 31 menstruates, must've not submitted any samples
+# participant.dass[which(is.na(participant.dass$survey_menstruate)),]$survey_menstruate <- 1
+# participant.dass <- participant.dass %>% 
+#   filter(biome_id!="31")
+# 
+# participant.dass$survey_menstruate_text <- as.factor(ifelse(participant.dass$survey_menstruate == 1, "Menstruate", "Do not menstruate"))
+# participant.dass$survey_menstruate_text <- factor(participant.dass$survey_menstruate_text, levels=c("Menstruate", "Do not menstruate"))
+# 
+shannon.dass.menses <- shannon.dass %>% 
+  left_join(menses.data.long, by=c("biome_id", "logDate"))
+
+dim(shannon.dass.menses)
+names(shannon.dass.menses)
+
+dim(shannon.dass.menses %>% 
+      filter(!is.na(menstruate)))
+shannon.dass.menses.filter <- shannon.dass.menses %>% 
+  filter(!is.na(menstruate))
+length(unique(shannon.dass.menses.filter$biome_id))
+
+# Figure: shannon diversity over time on menses v not
+ggplot(shannon.dass.menses.filter, aes(x = logDate, y = shannon)) +
+  geom_point(aes(color=as.factor(menstruate)), alpha=0.5) +
+  geom_smooth(method = "lm", se=FALSE, aes(color = as.factor(menstruate))) +
   labs(
     x = "Days", 
     y = "Shannon Diversity Index",
     title = "",
-    color="Menstruate v. No menstruate"
+    color="Menstruating v. Not menstruate"
   ) +
   theme_minimal() +
   scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
@@ -547,7 +718,7 @@ ggplot(participant.dass, aes(x = logDate, y = shannon)) +
 participant.dass.collapsed <- participant.dass %>% 
   distinct(biome_id, avg_shannon, birthControl, avg_stress, survey_menstruate)
 
-# Does Shannon diversity vary by menstruate/not menstruate?
+# Figure: Does Shannon diversity vary by menstruate/not menstruate?
 ggplot(participant.dass.collapsed, aes(x = as.factor(survey_menstruate), y = avg_shannon)) +
   geom_jitter(aes(color=as.factor(birthControl)), size=1, alpha=0.6) +
   geom_point(aes(color=as.factor(birthControl)), size=1, alpha=0.7) +

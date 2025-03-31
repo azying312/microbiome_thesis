@@ -1,15 +1,15 @@
 library(tidyverse)
 library(viridis)
 
-volunteer.survey <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv")
-menses.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 1-Menstruation.csv")
-med.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_med_data.csv")
-sexact.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 3-Sexual Activity.csv")
-physical.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
-sleep.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_sleep.csv")
-diet.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_diet.csv")
-samples.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/cleaned_samples.csv")
-DASS.data <- read.csv("/Users/alicezhang/Desktop/microbiome_data/cleaned_data/DASS.csv")
+volunteer.survey <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv")
+menses.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv")
+med.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_med_data.csv")
+sexact.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 3-Sexual Activity.csv")
+physical.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 4-Physical Activity.csv")
+sleep.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_sleep.csv")
+diet.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/fully_merged_diet_data.csv")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
+DASS.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/DASS_0503_2024-final_df.csv")
 
 ## Create missingness grid
 missingness_grid <- data.frame(matrix(NA, nrow = nrow(volunteer.survey), ncol = 11))
@@ -88,9 +88,9 @@ names(contraception_recorded) <- sexact.data.subset$biome_id
 
 ## 04 - Physical Activity
 cleaned_physical.data <- physical.data %>%
-  filter(!is.na(activity_date))
+  filter(!is.na(logDate))
 
-cleaned_physical.data$logDate <- as.Date(cleaned_physical.data$activity_date)
+# cleaned_physical.data$logDate <- as.Date(cleaned_physical.data$activity_date)
 all_days <- seq.Date(as.Date(min(cleaned_physical.data$logDate)), as.Date(max(cleaned_physical.data$logDate)), by = "day")
 length(all_days)
 cleaned_physical.data <- cleaned_physical.data %>%
@@ -151,14 +151,14 @@ participants.diet <- unique(as.numeric(filtered_diet.data$study_id))
 # % days participant submitted
 diet_submission <- filtered_diet.data %>%
   # get distinct days & participants
-  distinct(study_id, logDate) %>% 
-  group_by(study_id) %>%
+  distinct(biome_id, logDate) %>% 
+  group_by(biome_id) %>%
   summarise(Entries = n(), .groups = "drop") %>%
   mutate(Percentage = round((Entries / length(all_days)), 4) * 100)
 
 # Get diet data
 percent_diet_submission <- diet_submission$Percentage
-names(percent_diet_submission) <- diet_submission$study_id
+names(percent_diet_submission) <- diet_submission$biome_id
 # Join to missingness grid
 missingness_grid[, 8] <- percent_diet_submission[rownames(missingness_grid)]
 colnames(missingness_grid)[8] <- "Diet Data (% days)"
@@ -171,14 +171,14 @@ all_meals <- length(all_days)*3
 diet_submission <- filtered_diet.data %>%
   filter(type %in% c("breakfast", "lunch", "dinner")) %>% 
   # get distinct days, meals & participants
-  distinct(study_id, type, logDate) %>% 
-  group_by(study_id, type) %>%
+  distinct(biome_id, type, logDate) %>% 
+  group_by(biome_id, type) %>%
   summarise(Entries = n(), .groups = "drop") %>%
   mutate(Percentage = round((Entries / all_meals), 4) * 100)
 
 # Get diet data
 percent_diet_submission <- diet_submission$Percentage
-names(percent_diet_submission) <- diet_submission$study_id
+names(percent_diet_submission) <- diet_submission$biome_id
 # Join to missingness grid
 missingness_grid[, 5] <- percent_diet_submission[rownames(missingness_grid)]
 colnames(missingness_grid)[5] <- "Diet Data (% meals)"
@@ -259,7 +259,8 @@ colnames(missingness_grid)[10] <- "Gut (%)"
 
 ## 10 - DASS - col 12
 DASS.data$biome_id <- DASS.data$study_id
-posix_date_time <- as.POSIXct(DASS.data$Timestamp, format = "%m/%d/%y %H:%M")
+# posix_date_time <- as.POSIXct(DASS.data$Timestamp, format = "%m/%d/%y %H:%M")
+posix_date_time <- as.POSIXct(DASS.data$Timestamp, format = "%Y-%m-%d")
 DASS.data$Converted_Timestamp <- posix_date_time
 DASS.data$logDate <- format(posix_date_time, format = "%Y-%m-%d")
 cleaned_DASS.data <- DASS.data %>%
@@ -363,8 +364,8 @@ ggplot(missingness_long_count, aes(x = Variable, y = biome_ids, fill = Missing))
        x = "\n Data Type", 
        y = "Study ID \n", 
        fill = "Percentage") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) 
+  theme_minimal() #+
+  # theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1)) 
 
 # Samples # Missingness Plot
 missingness_long_samples<- missingness_long %>% 
@@ -379,3 +380,4 @@ ggplot(missingness_long_samples, aes(x = Variable, y = factor(biome_ids), fill =
        fill = "Percentage") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) 
+

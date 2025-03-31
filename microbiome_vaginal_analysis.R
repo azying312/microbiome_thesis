@@ -12,6 +12,8 @@ bacterial.data <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/relabeled_
 bacteria_taxa_df <- tax_table(bacterial.data)
 bacteria_metadata_df <- sample_data(bacterial.data)
 
+length(unique(bacteria_metadata_df$biome_id))
+
 #### Exploratory Data Analysis
 
 # Relative abundances
@@ -26,9 +28,10 @@ bacteria_metadata_df <- bacteria_metadata_df[,-2]
 otu_with_participant <-  relative_abundance_otu %>%
   left_join(bacteria_metadata_df, by="SampleID")
 rownames(otu_with_participant) <- otu_with_participant$SampleID
-relative_abundance_otu <- relative_abundance_otu %>% 
-  select(!SampleID)
+relative_abundance_otu <- relative_abundance_otu %>%
+  dplyr::select(!SampleID)
 
+dim(bacteria_metadata_df)
 
 ###################################################################################################
 
@@ -85,6 +88,8 @@ colnames(sample.cst) <- "CST"
 rownames(sample.cst) <- rownames(bacteria_metadata_df)
 sample.cst$SampleID <- rownames(sample.cst)
 
+dim(bacteria_metadata_df)
+
 ################################################################################
 
 head(bacteria_metadata_df)
@@ -127,6 +132,14 @@ shannon.cst.qr.merged.24 <- merge(sample.cst, shannon.qr.merged.24, by="SampleID
   # Filter the data to be within study days: 10-13 to 12-14
   filter(logDate > "2022-10-11" & logDate < "2022-12-16") # 2038 to 1971 --> 1571 in relabeled
 
+head(shannon.cst.qr.merged.24)
+
+CST_max <- shannon.cst.qr.merged.24 %>% 
+  group_by(biome_id) %>% 
+  summarise(CST_max = names(sort(table(CST), decreasing = TRUE)[1]))
+
+shannon.cst.qr.merged.24 <- shannon.cst.qr.merged.24 %>% 
+  left_join(CST_max, by = "biome_id")
 # Save R environment - did not resave after relabeling data
 # save.image("/Volumes/T7/microbiome_data/R_environments/vaginal_microbiome_relAbundance.RData")
 
@@ -136,11 +149,11 @@ library(viridis)
 
 ### Check UMinn Spreadsheet v. Sequenced Data
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_samplesv2.csv")
 # samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv")
 
 uminn_data <- uminn_data %>% 
-  select(Sample.ID, Special.Notes) %>% 
+  dplyr::select(Sample.ID, Special.Notes) %>% 
   filter(Sample.ID != "BLANK") %>% 
   # errors in sample processing from UMinn
   filter(!str_detect(Special.Notes, "error")) %>% 
@@ -176,7 +189,7 @@ shannon.cst.summary <- shannon.cst.qr.merged.24 %>%
   mutate(count=n(), .groups="drop") %>% 
   group_by(biome_id) %>% 
   mutate(prop=count/sum(count)) %>% 
-  select(!.groups) %>% 
+  dplyr::select(!.groups) %>% 
   ungroup() %>% 
   filter(!is.na(biome_id)) %>% 
   mutate(biome_id=as.numeric(biome_id))
@@ -185,11 +198,14 @@ dominant_cst <- shannon.cst.summary %>%
   group_by(biome_id) %>%
   filter(prop == max(prop)) %>%
   slice(1) %>% # person 52 has 1 sample in 2 CSTs
-  select(biome_id, CST) %>%
+  dplyr::select(biome_id, CST) %>%
   distinct()
 
 id_order <- dominant_cst %>% 
   arrange(CST, biome_id)
+
+# number of indvs with CST info
+length(unique(shannon.cst.summary$biome_id))
 
 # FIGURE
 cst_plt <- ggplot(shannon.cst.summary, aes(x=factor(biome_id, levels=id_order$biome_id), y=prop, fill=CST)) +
@@ -240,6 +256,9 @@ vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>%
   mutate(menses_day = ifelse(menses_status %in% c(1,2,3,7,9,78), "menses", 
                              ifelse(menses_status %in% c(4,5,6,10), "not_menses", NA)))
 
+length(unique(menses.data$biome_id))
+table(vaginal.microbial.menses.24$menses_day)
+
 # write.csv(vaginal.microbial.menses.24, file="/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
 write.csv(vaginal.microbial.menses.24, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
 
@@ -278,7 +297,7 @@ na.menses.day <- vaginal.microbial.menses.24 %>%
 ##########################################################################################
 
 menses.table.df <- vaginal.microbial.menses.24 %>% 
-  select(biome_id, logDate, CST, shannon, qr, max_taxa, OTU, menses_status, menses_day)
+  dplyr::select(biome_id, logDate, CST, shannon, qr, max_taxa, OTU, menses_status, menses_day)
 
 # Wilcox Sign Rank test on menses v. not menses day
 table(menses.table.df$biome_id, menses.table.df$menses_day)
@@ -309,18 +328,21 @@ for(id in participant_ids) {
     distinct(logDate)
   
   shannon_plt <- ggplot(vaginal.microbial.menses.24.participant, 
-                        aes(x=as.factor(logDate), y=shannon, color=as.factor(menses_day), 
+                        aes(x=as.factor(logDate), y=(shannon), color=as.factor(menses_day), 
                             shape=as.factor(menses_day))) +
     geom_point() +
-    scale_color_manual(values = c("not_menses" = "black", "menses" = "red", "not_recorded" = "purple")) +  
-    scale_shape_manual(values = c("not_menses" = 16, "menses" = 17, "not_recorded"=18)) +
+    scale_color_manual(name = "Menses Status",
+                       values = c("not_menses" = "black", "menses" = "red", "not_recorded" = "purple")) +  
+    scale_shape_manual(name = "Menses Status",
+                       values = c("not_menses" = 16, "menses" = 17, "not_recorded"=18)) +
     ylim(0,3)+
     # Add lines for the days with multiple samples
     geom_segment(data = dupe.day, 
                  aes(x = logDate, xend = logDate, y = -Inf, yend = Inf), 
                  linetype = "dashed", color = "gray50", inherit.aes = FALSE) +  
     theme_minimal() +
-    labs(x = "Date", y = "Shannon Index", title=paste(id, "Shannon diversity days")) +
+    labs(x = "Date", y = "Shannon Index", title=paste(id, "Shannon diversity days"),
+         ) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
   ggsave(file_name_id, shannon_plt, width = 8, height = 6, dpi = 300)
@@ -336,8 +358,7 @@ vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>%
   summarise(avg_shannon=mean(shannon), .groups="drop") %>% 
   pivot_wider(names_from = menses_day, values_from = avg_shannon, names_prefix = "menses_day_") %>% 
   filter(!is.na(menses_day_not_menses) & !is.na(menses_day_menses)) %>% 
-  select(!menses_day_NA)
-
+  dplyr::select(!menses_day_NA)
 ### Wilcox test
 wilcox.test(vaginal.microbial.menses.24.summary$menses_day_not_menses,
             vaginal.microbial.menses.24.summary$menses_day_menses, paired=TRUE)
@@ -359,14 +380,18 @@ ggplot(
 
 ##########################################################################################
 
+length(unique(vaginal.microbial.menses.24$biome_id))
+
 # Long term CST transition - participant shifts from one CST to another and stays in the new CST for 10 days or more
 longterm_cst_vaginal.microbial.menses.24 <- vaginal.microbial.menses.24 %>% 
-  select(SampleID, CST, shannon, qr, biome_id, logDate, sampleType, max_taxa, OTU, menses_day) %>% 
-  filter(!is.na(menses_day)) %>% 
+  dplyr::select(SampleID, CST, shannon, qr, biome_id, logDate, sampleType, max_taxa, OTU, menses_day) %>% 
+  # filter(!is.na(menses_day)) %>% # only if you need menses data
   arrange(biome_id, logDate) %>% 
   group_by(biome_id) %>% 
   mutate(CST_previous = lag(CST),   
          transition = CST != CST_previous)
+
+length(unique(longterm_cst_vaginal.microbial.menses.24$biome_id))
 
 longterm_cst_vaginal.microbial.menses.24 <- longterm_cst_vaginal.microbial.menses.24 %>%
   mutate(logDate = as.Date(logDate)) %>% 
@@ -387,6 +412,9 @@ table(max_gaps$max_gap)
 # 10 day length
 long_term_transitions <- longterm_cst_vaginal.microbial.menses.24 %>%
   filter(transition == TRUE, duration >= 10)
+
+length(unique(longterm_cst_vaginal.microbial.menses.24$biome_id))
+length(unique(long_term_transitions$biome_id))
 
 # Count transitions during and outside of menses
 transition_counts <- long_term_transitions %>%
@@ -427,7 +455,7 @@ lactobacillus_df <- study_days(lactobacillus_df)
 
 # Figure: Logged Relative Abundance of Lactobacillus Abundance Over Time
 ggplot(lactobacillus_df, aes(x = as.numeric(study_day), y = LactobacillusRelativeAbundance, group=biome_id, color=as.factor(biome_id))) +
-  geom_point(alpha = 0.4) +
+  geom_point(alpha = 0.2) +
   geom_smooth(method = "loess", se = FALSE, size = 0.5) +  
   # geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "orchid") +
   scale_y_log10() +
@@ -443,6 +471,8 @@ lactobacillus.menses <- lactobacillus_df %>%
   left_join(vaginal.microbial.menses.24.subset, by=c("SampleID", "biome_id", "logDate", "timestamp"))
 
 library(lme4)
+library(lmerTest)
+library(performance)
 
 lm.model <- lm(Lactobacillus_log~menses_day*study_day, data=lactobacillus.menses)
 summary(lm.model)

@@ -114,7 +114,7 @@ history_data_subset <- history_data_recode %>%
          dietary_habits, survey_menstruate, period_last_day, regular_periods, irreg_period_notes, period_len,
          menstrual_prod, vaginal_notes, sexuallyActive, menstrual_cup, tampon, pad, no_menstrual_product)
 
-### Add menstruation data from Mayo for menstruation variable
+### Add menstruation data from UMinn for menstruation variable
 menses_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
 # menstruation status 1,2,3,7,9
 menses_data_collapsed <- menses_data %>% 
@@ -188,8 +188,11 @@ history_data_subset$birthControl[history_data_subset$birthControl=="Hormonal int
                      | history_data_subset$birthControl =="Vaginal ring"] <- "Local P"
 
 unique(history_data_subset$birthControl) # Orilissa (Elagolix) is nonhormonal
+table(history_data_subset$birthControl)
 
 ## Organize sport to be "off-season", "in-season", or "no sport" 
+
+table(history_data_subset$activity_level)
 
 history_data_subset <- history_data_subset %>% 
   mutate(field_hockey = ifelse(grepl("field hockey", history_data_subset$sport, ignore.case = TRUE), TRUE, FALSE))
@@ -214,6 +217,8 @@ history_data_subset$sport[grepl("no", history_data_subset$sport, ignore.case = T
 history_data_subset$sport[grepl("field hockey", history_data_subset$sport, ignore.case = TRUE) |
                             grepl("cross country", history_data_subset$sport, ignore.case = TRUE) |
                             grepl("track", history_data_subset$sport, ignore.case = TRUE)] <- "In-Season"
+# 9, 46
+table(history_data_subset$sport)
 
 ### Save final data output
 write.csv(history_data_subset,

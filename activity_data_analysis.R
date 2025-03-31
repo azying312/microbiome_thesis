@@ -16,21 +16,71 @@ activity.data <- study_days(activity.data)
 
 ##########################################################################################
 
-# distribution of steps
-ggplot(activity.data, aes(x=factor(biome_id), y=steps, fill="orchid")) +
-  geom_bar(stat="identity") +
+length(unique(activity.data$biome_id))
+
+activity.data.collapsed <- activity.data %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_steps = sum(steps) / n()) 
+
+head(activity.data.collapsed, 7)
+
+# Activity: distribution of average steps throughout study
+ggplot(activity.data.collapsed, aes(x=factor(biome_id), y=avg_steps)) +
+  geom_bar(stat="identity", fill ="orchid", color="black") +
   theme_minimal() +
-  labs(x = "Participant ID", y = "Steps", title = "Distribution of Steps") +
+  labs(x = "Participant ID", y = "Average Steps", title = " ") +
   theme(legend.position = "none") 
+
+summary(activity.data.collapsed$avg_steps)
+
+dim(activity.data) # 2532   13
+dim(activity.data %>% 
+      group_by(biome_id, Date) %>% 
+      distinct())
+
+# filter for study days
+activity.data <- study_days(activity.data)
+dim(activity.data)
+
+# filter out 0 step count data
+summary(activity.data$steps)
+activity.data <- activity.data %>%
+  filter(steps != 0)
 
 #### Correlate with shannon data
 # vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifetyle/vaginal.microbial.menses.24.csv")
 vaginal.microbial.menses.24 <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/vaginal.microbial.menses.24.csv")
 vaginal.microbial.menses.24 <- vaginal.microbial.menses.24[,-1]
+dim(vaginal.microbial.menses.24)
 
 # join by date and participant
 activity.data.shannon <- vaginal.microbial.menses.24 %>% 
   left_join(activity.data, by=c("biome_id", "logDate"))
+dim(activity.data.shannon)
+sum(!is.na(activity.data.shannon$study_day))
+sum(is.na(activity.data.shannon$study_day))
+
+activity.data.shannon <- activity.data.shannon %>% 
+  filter(!is.na(study_day))
+length(unique(activity.data.shannon$biome_id))
+
+# 449 activity days not matched with swabs before filter 0 step count days
+# 1122 activity days do match before filtering
+
+# after filtering for 0
+# 476 activity not matched with swabs
+# 1095 match with swabs
+
+activity.data.collapsed <- activity.data %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_steps = sum(steps) / n()) 
+
+# Activity: filtered distribution of average steps throughout study
+ggplot(activity.data.collapsed, aes(x=factor(biome_id), y=avg_steps)) +
+  geom_bar(stat="identity", fill ="orchid", color="black") +
+  theme_minimal() +
+  labs(x = "Participant ID", y = "Average Steps", title = " ") +
+  theme(legend.position = "none") 
 
 # steps
 # lm.shannon.activity <- lm(shannon ~ steps, data = activity.data.shannon)
@@ -77,6 +127,37 @@ vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24 %>%
 activity.data.summary <- vaginal.microbial.menses.24.summary %>% 
   left_join(activity.data.summary, by="biome_id")
 
+## plot relationship between preds and avg shannon
+plot(activity.data.summary$avg_cals_burned, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_steps, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_distance, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_minutes_sedentary, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_minutes_lightly_active, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_minutes_fairly_active, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_minues_very_active, activity.data.summary$avg_shannon)
+plot(activity.data.summary$avg_activity_calories, activity.data.summary$avg_shannon)
+plot(activity.data.summary$total_min_active, activity.data.summary$avg_shannon)
+
+
+
+## simple linear regression
+library(car)
+
+lm.shannon.activity <- lm(avg_shannon ~ avg_steps+#avg_cals_burned+
+                            #avg_distance+ # alias for avg_steps
+                            avg_minutes_sedentary+
+                            avg_minutes_lightly_active+
+                            avg_minutes_fairly_active+
+                            avg_minues_very_active #+avg_activity_calories+
+                            #total_min_active
+                          , data = activity.data.summary)
+#pairs(activity.data.summary[,-c(1,2)])
+# cor(activity.data.summary[,-c(1,2)])
+summary(lm.shannon.activity)
+
+
+vif(lm.shannon.activity)
+
 # steps
 lm.shannon.activity <- lm(avg_shannon ~ avg_steps, data = activity.data.summary)
 summary(lm.shannon.activity)
@@ -107,11 +188,11 @@ summary(lm.shannon.activity)
 ## Mixed Effects Model
 library(lme4)
 library(lmerTest)
-
-activity.data.shannon.filtered <- activity.data.shannon %>% 
-  group_by(biome_id) %>% 
-  filter(n() > 10)
-table(activity.data.shannon.filtered$biome_id)
+library(performance)
+# activity.data.shannon.filtered <- activity.data.shannon %>% 
+#   group_by(biome_id) %>% 
+#   filter(n() > 10)
+# table(activity.data.shannon.filtered$biome_id)
 
 ## Different baseline, same slope, different intercept
 
@@ -140,7 +221,7 @@ summary(lmer.models$minutes_fairly_active)
 summary(lmer.models$minues_very_active)
 summary(lmer.models$activity_calories)
 
-## random intercepts, random slops
+## random intercepts, random slopes
 rnd.slope.lmer.models <- mixed_effects_rnd_slope(activity.data.shannon, 10, "shannon", fixed_list)
 
 # r2(rnd.slope.lmer.models$steps)
@@ -162,22 +243,23 @@ summary(rnd.slope.lmer.models$minues_very_active)
 summary(rnd.slope.lmer.models$activity_calories)
 
 # full model - fixed slopes, rnd intercepts
-lmer.full <- lmer(shannon~steps + distance +
-                  calories_burned + minutes_sedentary + minutes_lightly_active +
-                    minutes_fairly_active + minues_very_active + activity_calories +
+lmer.full <- lmer(shannon~steps + # distance + calories_burned + 
+                  minutes_sedentary + minutes_lightly_active +
+                    minutes_fairly_active + minues_very_active + #activity_calories +
                     (1|`biome_id`), 
                   data = activity.data.shannon)
 r2(lmer.full)
+summary(lmer.full)
 
 # full model - random slopes, rnd intercepts
 rnd.slope.lmer.full <- lmer(shannon~ steps + (steps||`biome_id`) + 
-                              distance + (distance||`biome_id`) +
-                    calories_burned + (calories_burned||`biome_id`) +
+                              #distance + (distance||`biome_id`) +
+                    #calories_burned + (calories_burned||`biome_id`) +
+                      # activity_calories + (activity_calories||`biome_id`)
                       minutes_sedentary + (minutes_sedentary||`biome_id`) +
                       minutes_lightly_active + (minutes_lightly_active||`biome_id`) +
                     minutes_fairly_active + (minutes_fairly_active||`biome_id`) +
-                      minues_very_active + (minues_very_active||`biome_id`) +
-                      activity_calories + (activity_calories||`biome_id`),
+                      minues_very_active + (minues_very_active||`biome_id`),
                   data = activity.data.shannon)
 r2(rnd.slope.lmer.full)
 
@@ -186,20 +268,23 @@ anova(lmer.full, rnd.slope.lmer.full)
 ##########################################################################################
 
 ## Time
-activity.time.model <- lmer(shannon ~ study_day + steps +
-                               distance + calories_burned + minutes_sedentary +
+activity.time.model <- lmer(shannon ~ study_day + steps + distance + activity_calories +
+                              #calories_burned + 
+                              minutes_sedentary +
                                minutes_lightly_active + minutes_fairly_active +
-                               minues_very_active + activity_calories +
+                               minues_very_active + 
                                + (1 | biome_id),
                              data = activity.data.shannon)
 r2(activity.time.model)
+summary(activity.time.model)
 anova(lmer.full, activity.time.model)
 
 ## Time and Time^2
 activity.time2.model <- lmer(shannon ~ study_day + I(study_day^2) + steps +
-                              distance + calories_burned + minutes_sedentary +
+                              #distance + calories_burned + activity_calories +
+                               minutes_sedentary +
                               minutes_lightly_active + minutes_fairly_active +
-                              minues_very_active + activity_calories +
+                              minues_very_active + 
                               + (1 | biome_id),
                             data = activity.data.shannon)
 r2(activity.time2.model)
@@ -220,9 +305,14 @@ activity.sport.summary <- activity.data.summary %>%
   left_join(participant.data, by="biome_id") %>% 
   filter(!is.na(sport))
 
+table(activity.sport.summary$sport)
+sum(is.na(activity.sport.summary$sport))
+length(activity.sport.summary$sport)
+
+# Activity: avg shannon and type of sport
 ggplot(activity.sport.summary, aes(x = sport, y = avg_shannon)) +
   geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  geom_jitter(width = 0.2, alpha = 0.9, color="orchid") +
   labs(
     x = " ", 
     y = "Average Shannon Diversity", 
@@ -235,10 +325,12 @@ ggplot(activity.sport.summary, aes(x = sport, y = avg_shannon)) +
 aov_sport <- aov(avg_shannon ~ sport, data = activity.sport.summary)
 summary(aov_sport)
 
-## Sports collapsed
+table(activity.sport.summary$sport_collapsed)
+
+# Activity: avg shannon on Sports collapsed
 ggplot(activity.sport.summary, aes(x = sport_collapsed, y = avg_shannon)) +
   geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
+  geom_jitter(width = 0.2, alpha = 0.9, color="orchid") +
   labs(
     x = " ", 
     y = "Average Shannon Diversity", 
@@ -260,6 +352,8 @@ activity.sport.summary2 <- activity.sport.summary %>%
                              ifelse(sport_collapsed=="In-Season",
                                     "In-Season", "Off-Season")))
 
+table(activity.sport.summary2$field_hockey)
+
 ggplot(activity.sport.summary2, aes(x = field_hockey, y = avg_shannon)) +
   geom_boxplot(outlier.shape = NA) +
   geom_jitter(width = 0.2, alpha = 0.6, color="orchid") +
@@ -276,7 +370,7 @@ wilcox.test(avg_shannon ~ field_hockey, data = activity.sport.summary)
 
 ##########################################################################################
 
-# levels of activity
+# levels of activity - skipped in writing because more arbitrary analysis
 
 activity.data.summary.levels <- activity.data.summary %>% 
   mutate(exercise_level = case_when(

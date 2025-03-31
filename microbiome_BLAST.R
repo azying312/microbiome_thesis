@@ -21,6 +21,9 @@ BLAST_taxa <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/max taxa BLAST.
 
 ###############################################################################################
 
+vaginal_metadata_df <- as.data.frame(sample_data(bacterial.data))
+dim(vaginal_metadata_df)
+
 #### Exploratory Data Analysis
 
 # Relative abundances
@@ -89,6 +92,10 @@ tax.22 <- tax.22 %>%
 tax_table(bacterial.data) <- as.matrix(tax.22)
 
 vaginal_max_taxa <- phyloseq(otu_table(bacterial.data), sample_data(bacterial.data), tax_table(bacterial.data))
+
+class(vaginal_max_taxa)
+vaginal_metadata_df <- as.data.frame(sample_data(vaginal_max_taxa))
+dim(vaginal_metadata_df)
 
 # Save new obj
 # saveRDS(vaginal_max_taxa, file = "/Volumes/T7/microbiome_data/sequenced_data/vaginal_cleaned_max_taxa.rds")

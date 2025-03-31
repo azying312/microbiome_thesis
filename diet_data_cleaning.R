@@ -19,6 +19,7 @@ original_bitesnap_data <- read.csv("/Volumes/T7/microbiome_data/original_data/Bi
 avi_bd_data <- read.csv("/Volumes/T7/microbiome_data/original_data/BDNutrition - Sheet1.csv", header = TRUE)
 bd_mapping <- read.csv("/Volumes/T7/microbiome_data/original_data/BDNutrition - Sheet3.csv", header = TRUE)
 food_other <- read.csv("/Volumes/T7/microbiome_data/original_data/food_other.csv", header = TRUE)
+volunteer_df <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv")
 
 ## Merge avi_data and avi_bd_data
 mapped_avi_bd_data <- avi_bd_data %>% 
@@ -37,6 +38,14 @@ merged_avi_data <- avi_data %>%
 original_dh_data <- original_dh_data %>%
   rename("biome_id" = "uid")
 studyID_dh_data <- study_mapping(original_dh_data, id_mapping)
+
+# how many biome id
+length(unique(studyID_dh_data$biome_id))
+
+# who in diet data have volunteer data
+setdiff(unique(studyID_dh_data$biome_id), unique(volunteer_df$biome_id))
+setdiff(unique(volunteer_df$biome_id), unique(studyID_dh_data$biome_id))
+length(intersect(unique(studyID_dh_data$biome_id), unique(volunteer_df$biome_id)))
 
 ### Splitting days into individual item entries
 # Onerow generates warnings if there are IDs that are not numbers (beverages & desserts)

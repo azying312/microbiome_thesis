@@ -5,7 +5,7 @@ library(tidyverse)
 
 # after vaginal_gut_sample_check.R
 bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_cleanedv2.rds")
-samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+samples.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_samplesv2.csv")
 
 # FIRST RUN (NO RELABELING)
 # bacteria_physeq <- readRDS("/Volumes/T7/microbiome_data/sequenced_data/02_11/bacteria_intermediary2.rds")
@@ -139,6 +139,12 @@ total_reads_Species <- sum(otu_table(bacterial.data_subset))
 # Percent removed
 total_reads_filtered-total_reads_Species # 50122517 removed
 100*(total_reads_filtered-total_reads_Species)/total_reads_filtered # 36.262% removed
+
+bacteria_metadata <- sample_data(bacterial.data_subset)
+bacteria_metadata_df <- as.data.frame(bacteria_metadata)
+dim(bacteria_metadata_df)
+head(bacteria_metadata_df)
+length(unique(bacteria_metadata_df$biome_id))
 
 # Save new obj
 # BEFORE RE-LABEL DATA
