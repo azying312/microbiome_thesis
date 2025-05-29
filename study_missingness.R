@@ -69,7 +69,7 @@ cleaned_sexact_percentage <- cleaned_sexact.data$Percentage
 names(cleaned_sexact_percentage) <- cleaned_sexact.data$biome_id
 # Join to missingness grid
 missingness_grid[, 4] <- cleaned_sexact_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[4] <- "Sexual Activity (%)"
+colnames(missingness_grid)[4] <- "Sexual Activity"
 
 # Sex active binary
 sexact.data.subset <- sexact.data %>% 
@@ -106,7 +106,7 @@ cleaned_physical_percentage <- cleaned_physical.data$Percentage
 names(cleaned_physical_percentage) <- cleaned_physical.data$biome_id
 # Join to missingness grid
 missingness_grid[, 6] <- cleaned_physical_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[6] <- "Physical Activity (%)"
+colnames(missingness_grid)[6] <- "Physical Activity"
 
 ## 05 - Sleep
 cleaned_sleep.data <- sleep.data %>%
@@ -128,7 +128,7 @@ cleaned_sleep_percentage <- cleaned_sleep.data$Percentage
 names(cleaned_sleep_percentage) <- cleaned_sleep.data$biome_id
 # Join to missingness grid
 missingness_grid[, 7] <- cleaned_sleep_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[7] <- "Sleep Data (%)"
+colnames(missingness_grid)[7] <- "Sleep Data"
 
 ## 07 - Food
 
@@ -161,7 +161,7 @@ percent_diet_submission <- diet_submission$Percentage
 names(percent_diet_submission) <- diet_submission$biome_id
 # Join to missingness grid
 missingness_grid[, 8] <- percent_diet_submission[rownames(missingness_grid)]
-colnames(missingness_grid)[8] <- "Diet Data (% days)"
+colnames(missingness_grid)[8] <- "Diet Data (days)"
 
 # Col 05 - % meals submitted
 # assume 3 meals a day
@@ -176,12 +176,15 @@ diet_submission <- filtered_diet.data %>%
   summarise(Entries = n(), .groups = "drop") %>%
   mutate(Percentage = round((Entries / all_meals), 4) * 100)
 
+length(unique(filtered_diet.data$biome_id))
+dim(diet_submission)[1]/(length(all_days)*3*72)
+
 # Get diet data
 percent_diet_submission <- diet_submission$Percentage
 names(percent_diet_submission) <- diet_submission$biome_id
 # Join to missingness grid
 missingness_grid[, 5] <- percent_diet_submission[rownames(missingness_grid)]
-colnames(missingness_grid)[5] <- "Diet Data (% meals)"
+colnames(missingness_grid)[5] <- "Diet Data (meals)"
 
 
 ## Percentage Vegetarian - col 9 (of all cals, how many for each person are vegetarian)
@@ -232,7 +235,7 @@ cleaned_vag_percentage <- vaginal.samples$Percentage
 names(cleaned_vag_percentage) <- vaginal.samples$biome_id
 # Join to missingness grid
 missingness_grid[,9] <- cleaned_vag_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[9] <- "Vaginal (%)"
+colnames(missingness_grid)[9] <- "Vaginal"
 
 # % Gut - col 10
 gut.samples <- cleaned_samples.data %>% 
@@ -255,7 +258,7 @@ cleaned_gut_percentage <- gut.samples$Percentage
 names(cleaned_gut_percentage) <- gut.samples$biome_id
 # Join to missingness grid
 missingness_grid[, 10] <- cleaned_gut_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[10] <- "Gut (%)"
+colnames(missingness_grid)[10] <- "Gut"
 
 ## 10 - DASS - col 12
 DASS.data$biome_id <- DASS.data$study_id
@@ -287,7 +290,7 @@ cleaned_DASS_percentage <- cleaned_DASS.data$Percentage
 names(cleaned_DASS_percentage) <- cleaned_DASS.data$biome_id
 # Join to missingness grid
 missingness_grid[, 11] <- cleaned_DASS_percentage[rownames(missingness_grid)]
-colnames(missingness_grid)[11] <- "DASS (%)"
+colnames(missingness_grid)[11] <- "DASS"
 
 ### Missingness Plot
 
@@ -304,11 +307,11 @@ length(names(missingness_df_cont))
 
 # Reorder
 missingness_df_cont <- missingness_df_cont %>% 
-  select("Diet Data (% days)", "Diet Data (% meals)", # "Plant-based (%)",
-         "Menses Data", "Vaginal (%)", "Gut (%)",
-         "Physical Activity (%)", "Sleep Data (%)",
-         "DASS (%)",
-         "Sexual Activity (%)", "Volunteer Survey", everything())
+  select("Diet Data (days)", "Diet Data (meals)", # "Plant-based (%)",
+         "Menses Data", "Vaginal", "Gut",
+         "Physical Activity", "Sleep Data",
+         "DASS",
+         "Sexual Activity", "Volunteer Survey", everything())
 
 # Reshape to long format
 missingness_long <- pivot_longer(missingness_df_cont,
@@ -337,39 +340,41 @@ colsum_df <- missingness_long_count %>%
 
 missingness_long_count <- missingness_long_count %>%
   mutate(
-    Variable = factor(Variable, levels = c("Volunteer Survey", "Physical Activity (%)", "Sleep Data (%)",
-                                           "Diet Data (% days)", "Diet Data (% meals)",
-                                           "Gut (%)", "Vaginal (%)",
-                                           "Menses Data", "Sexual Activity (%)",
-                                           "DASS (%)")),
+    Variable = factor(Variable, levels = c("Volunteer Survey", "Physical Activity", "Sleep Data",
+                                           "Diet Data (days)", "Diet Data (meals)",
+                                           "Gut", "Vaginal",
+                                           "Menses Data", "Sexual Activity",
+                                           "DASS")),
     biome_ids = factor(biome_ids, levels = rev(unique(biome_ids)))
   )
 
 missingness_long_count <- missingness_long_count %>%
   mutate(
-    Variable = factor(Variable, levels = c("Volunteer Survey", "DASS (%)",
-                                           "Physical Activity (%)", "Sleep Data (%)",
-                                           "Vaginal (%)", "Gut (%)", "Diet Data (% days)", "Diet Data (% meals)",
-                                           "Menses Data", "Sexual Activity (%)"
+    Variable = factor(Variable, levels = c("Volunteer Survey", "DASS",
+                                           "Physical Activity", "Sleep Data",
+                                           "Vaginal", "Gut", "Diet Data (days)", "Diet Data (meals)",
+                                           "Menses Data", "Sexual Activity"
                                            )),
     biome_ids = factor(biome_ids, levels = rev(unique(biome_ids)))
   )
 
-# Missingness Plot
+# Study Completion Plot
 ggplot(missingness_long_count, aes(x = Variable, y = biome_ids, fill = Missing)) +
   geom_tile(color = "gray25") +
   scale_fill_viridis_c(option = "viridis", direction=-1,
                        na.value = "grey50") +
-  labs(title = "Study Completion Heatmap", 
-       x = "\n Data Type", 
-       y = "Study ID \n", 
-       fill = "Percentage") +
-  theme_minimal() #+
-  # theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1)) 
+  labs(title = " ", 
+       # x = "\n Data Type", 
+       x="",
+       y = "Participant ID \n", 
+       fill = "Percentage (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5),
+        text=element_text(size=15))
 
 # Samples # Missingness Plot
 missingness_long_samples<- missingness_long %>% 
-  filter(Variable=="Gut (%)" | Variable=="Vaginal (%)")
+  filter(Variable=="Gut" | Variable=="Vaginal")
 ggplot(missingness_long_samples, aes(x = Variable, y = factor(biome_ids), fill = Missing)) +
   geom_tile(color = "gray25") +
   scale_fill_viridis_c(option = "viridis", direction=-1,
@@ -379,5 +384,6 @@ ggplot(missingness_long_samples, aes(x = Variable, y = factor(biome_ids), fill =
        y = "Study ID", 
        fill = "Percentage") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) 
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1),
+        text=element_text(size=18))
 

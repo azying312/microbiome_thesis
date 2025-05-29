@@ -62,7 +62,7 @@ if (length(missing_days) > 0) {
 menses_data <- survey_data %>% 
   left_join(collapsed_days, by="biome_id")
 
-## Fig 1: Plot Initial Data - data missingness
+## Menses: Fig 1: Plot Initial Data - data missingness
 # heatmap_plot(menses_data)
 heatmap_plot1(menses_data)
 
@@ -86,7 +86,7 @@ mismatch_menstruate_df <- menses_data %>%
   filter(!is.na(biome_id))
 length(unique(mismatch_menstruate_df$biome_id))
 
-# Fig 2: Heatmap of Biome ID by Date - self-report don't menstruate
+# Menses: Fig 2: Heatmap of Biome ID by Date - self-report don't menstruate
 heatmap_plot1(mismatch_menstruate_df)
 
 # Check Volunteer Surveys
@@ -98,7 +98,7 @@ person_says_no_menses <- survey_data %>%
   filter(survey_menstruate==0) %>% 
   left_join(collapsed_days, by="biome_id")
 
-# Fig 3: Heatmap of Biome ID by Date - self-report don't menstruate
+# Menses: Fig 3: Heatmap of Biome ID by Date - self-report don't menstruate
 heatmap_plot1(person_says_no_menses)
 
 ## Everyone who says they do menstruate
@@ -113,7 +113,7 @@ person_says_menses_data <- person_says_menses %>%
   filter(if_any(starts_with("2022-"), ~. == 1) )
 length(unique(person_says_menses_data$biome_id))
 
-# Fig 4: Heatmap of Biome ID by Date - self-report do menstruate
+# Menses: Fig 4: Heatmap of Biome ID by Date - self-report do menstruate
 heatmap_plot1(person_says_menses_data)
 
 ## Participants to Impute
@@ -121,7 +121,7 @@ participants_to_impute <- c(unique(person_says_menses_data$biome_id), unique(mis
 participants_to_impute_df <- menses_data %>% 
   filter(biome_id %in% participants_to_impute)
 
-# Fig 5: Heatmap of Biome ID by Date - participants who have menses data to work with
+# Menses: Fig 5: Heatmap of Biome ID by Date - participants who have menses data to work with
 heatmap_plot1(participants_to_impute_df)
 
 ####################################################################
@@ -145,11 +145,11 @@ collapsed_days <- full_data %>%
 
 # Menstruation Data
 imputation_data <- survey_data %>% 
-  left_join(collapsed_days, by="biome_id") %>% 
+  left_join(collapsed_days, by="biome_id") #%>% 
   # get only ppl that menstruated throughout study -  comment out for full participant mapping
-  filter(biome_id %in% participants_to_impute)
+  # filter(biome_id %in% participants_to_impute)
 
-# Fig 6: Heatmap of Biome ID by Date - imputable participants
+# Menses: Fig 6: Heatmap of Biome ID by Date - imputable participants
 heatmap_plot2(imputation_data)
 
 ####################################################################
@@ -168,11 +168,11 @@ dim(regular_cycle_df)
 dim(irregular_cycle_df)
 dim(noinfo_cycle_df)
 
-# Fig 7: Heatmap of Biome ID by Date - regular cycle
+# Menses: Fig 7: Heatmap of Biome ID by Date - regular cycle
 heatmap_plot2(regular_cycle_df)
-# Fig 8: Heatmap of Biome ID by Date - irregular cycle
+# Menses: Fig 8: Heatmap of Biome ID by Date - irregular cycle
 heatmap_plot2(irregular_cycle_df)
-# Fig 9: Heatmap of Biome ID by Date - no reported cycle
+# Menses: Fig 9: Heatmap of Biome ID by Date - no reported cycle
 heatmap_plot2(noinfo_cycle_df)
 
 ####################################################################
@@ -296,7 +296,9 @@ imputation_data_v2 <- imputation_data %>%
                 ~ ifelse(biome_id==34, 78, .) )) %>% 
   mutate(across(all_of(person32_days),
                 ~ ifelse(biome_id==32, 78, .) ))
-# Fig 13: Heatmap of Biome ID by Date Imputed Data
+
+# Menses: Fig 13: Heatmap of Biome ID by Date Imputed Data
+# source("~/Microbiome Thesis/functions.R")
 heatmap_plot_imputation(imputation_data_v2)
 
 ### Save final data output

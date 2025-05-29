@@ -8,8 +8,17 @@
 library(tidyverse)
 
 # RELABELED DATA
-full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
-# full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_menstruation_data.csv", header=TRUE)
+# full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_menstruation_data.csv", header=TRUE)
+full_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/imputed_menstruation_data_3_11.csv", header=TRUE)
+full_data <- full_data %>% 
+  rename_with(~gsub("X2022.", "2022.", .), starts_with("X2022.")) %>% 
+  rename_with(~gsub("\\.", "-", .))
+# Reshape
+full_data <- full_data %>% 
+  pivot_longer(cols=starts_with("2022-"), names_to="logDate", values_to="menses_status")
+full_data <- full_data %>% 
+  mutate(menstruate = ifelse(menses_status %in% c(1,2,3,7,9), "Menstruating", "Not menstruating"),
+         logDate = as.Date(logDate))
 survey_data_full <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report 9-Volunteer Medical History.csv", header=TRUE)
 
 length(unique(full_data$logDate))

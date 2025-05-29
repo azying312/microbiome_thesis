@@ -93,17 +93,26 @@ heatmap_data_plot <- heatmap_data %>%
   arrange(desc(meals_count), biome_id) %>% 
   ungroup()
 
-# all dates showing
-ggplot(heatmap_data_plot, aes(x = as.factor(Date), y = reorder(factor(biome_id), meals_count), fill = MealsPerDay)) +
+heatmap_data_plot <- heatmap_data_plot %>% 
+  rename(logDate = Date)
+heatmap_data_plot <- study_days(heatmap_data_plot)
+
+# Diet: all dates showing
+ggplot(heatmap_data_plot, aes(x = study_day, y = reorder(factor(biome_id), meals_count), fill = MealsPerDay)) +
   geom_tile(color = "gray25") +
-  scale_fill_manual(values = c("white", "lightblue", "blue", "darkblue"), 
+  scale_fill_manual(labels = c("0"="No meals", "1"="One meal",
+                               "2"="Two meals", "3"="Three meals"),
+                               values = c("white", "lightblue", "blue", "darkblue"), 
                     na.value = "white")+
   labs(title = " ", 
-       x = "Date", 
-       y = "Biome ID", 
-       fill = "Number of Meals") +
+       x = " ", 
+       y = " ", 
+       fill = "Number of Meals Recorded") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1))
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1),
+        text = element_text(size=15)) +
+  scale_x_continuous(breaks = seq(0, max(heatmap_data_plot$study_day), by = 5))
+
 
 ##########################################################################################
 sum(is.na(merged_diet_data$serving.size))
@@ -248,16 +257,18 @@ vaginal.microbial.menses.24.summary <- vaginal.microbial.menses.24.summary %>%
 
 table(vaginal.microbial.menses.24.summary$is_vegetarian_bin)
 
+# Diet: average shannon diversity boxplots by veg status
 ggplot(vaginal.microbial.menses.24.summary, aes(x = is_vegetarian_bin, y = avg_shannon)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.2, alpha = 0.9, color="orchid") +
+  geom_boxplot(outlier.shape = NA, fill="skyblue", alpha=0.1) +
+  geom_jitter(width = 0.2, alpha = 0.7, color="orchid") +
   labs(
     x = " ", 
     y = "Average Shannon Diversity", 
     title = ""
   ) +
   theme_minimal() +
-  theme(legend.position = "none") 
+  theme(legend.position = "none",
+        text=element_text(size=18)) 
 
 # testing
 t.test(avg_shannon ~ is_vegetarian, data=vaginal.microbial.menses.24.summary)
@@ -288,8 +299,6 @@ summary(vegetarian.diet.df$perc_veg)
 
 veg_perc_df <- vaginal.microbial.menses.24 %>% 
   left_join(veg_perc_df, by="biome_id")
-
-
 
 # shannon and percent veg - cannot analyze like this
 # lm.obj <- lm(shannon ~ perc_veg, data = veg_perc_df)
@@ -379,10 +388,12 @@ ggplot(veg_perc_df, aes(x = shannon, y = perc_veg)) +
 
 # Diet: scatter plot of percent vegetarian on average shannon diversity
 ggplot(shannon.birthControl.collapsed.diet, aes(x = perc_veg, y = avg_shannon)) +
-  geom_point() +
+  geom_point(col="orchid") +
   labs(x = "Percent Vegetarian", y = "Average Shannon Diversity", 
        title = " ") +
-  theme_minimal()
+  theme_minimal()+
+  theme(legend.position = "none",
+        text=element_text(size=18))
 
 # Diet: scatter plot of percent vegetarian on average shannon diversity colored by Birth control
 shannon.birthControl.collapsed.diet %>%
@@ -460,7 +471,7 @@ nutrient.diet.22.microbiome <- shannon.cst.qr.merged.24 %>%
 
 # Diet nutrients: pairwise plots for correlation between nutrients
 macronutrients <- nutrient.diet.22.microbiome %>% 
-  dplyr::select(-c(SampleID, CST,  biome_id, shannon, qr, logDate, status, timestamp, sampleType, max_taxa, OTU, CST_max))
+  dplyr::select(-c(SampleID, CST, qr, status, timestamp, sampleType, max_taxa, OTU, CST_max))
   # dplyr::select(!c(biome_id, avg_shannon, max_CST))
 
 macronutrients_renamed <- macronutrients %>%
@@ -475,10 +486,87 @@ macronutrients_renamed <- macronutrients %>%
     Fat = fat_prop,
   )
 
-names(macronutrients_renamed)
-
 # Figure: corr plots of macronutrients
-pairs(macronutrients_renamed[,-c(9,10)])
+pairs(macronutrients_renamed[,-c(2, 3)])
+
+# regression
+
+nutrient.diet.22.microbiome.summary <- merged_diet_data %>% # get props for each person by day
+  group_by(biome_id, Date) %>% 
+  summarise(caloriesall_avg = sum(caloriesall, na.rm=TRUE) / n(), # get avg cals per day
+            cholesterol_prop = sum(cholesterolall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            satFat_prop = sum(saturatedFatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sodium_prop = sum(sodiumall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            carb_prop = sum(carbohydratesall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            dietFib_prop = sum(dietaryFiberall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            sugar_prop = sum(sugarsall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            protein_prop = sum(proteinall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_prop = sum(fatall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            fat_cal_prop = sum(caloriesFromFat, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE),
+            addedSugarall_prop = sum(addedSugarall, na.rm=TRUE) / sum(caloriesall, na.rm=TRUE)) %>% 
+  ungroup() %>% 
+  # get by day averages
+  group_by(biome_id) %>% 
+  summarise(caloriesall_avg = sum(caloriesall_avg, na.rm=TRUE) / n(), # get avg cals per day
+            cholesterol_prop = sum(cholesterol_prop, na.rm=TRUE) / n(),
+            satFat_prop = sum(satFat_prop, na.rm=TRUE) / n(),
+            sodium_prop = sum(sodium_prop, na.rm=TRUE) / n(),
+            carb_prop = sum(carb_prop, na.rm=TRUE) / n(),
+            dietFib_prop = sum(dietFib_prop, na.rm=TRUE) / n(),
+            sugar_prop = sum(sugar_prop, na.rm=TRUE) / n(),
+            protein_prop = sum(protein_prop, na.rm=TRUE) / n(),
+            fat_prop = sum(fat_prop, na.rm=TRUE) / n(),
+            fat_cal_prop = sum(fat_cal_prop, na.rm=TRUE) / n(),
+            addedSugarall_prop = sum(addedSugarall_prop, na.rm=TRUE) / n()) %>% 
+  ungroup()
+
+shannon.diet <- shannon.cst.qr.merged.24 %>% 
+  group_by(biome_id) %>% 
+  summarise(avg_shannon=sum(shannon, na.rm=TRUE)/n())
+
+shannon.diet <- shannon.diet %>% 
+  left_join(nutrient.diet.22.microbiome.summary)
+
+# Avg Vaginal and Gut Microbiome
+shannon.diet_renamed <- shannon.diet %>%
+  rename(
+    `Total Cal` = caloriesall_avg,
+    Choles = cholesterol_prop,
+    `Sat \n Fat` = satFat_prop,
+    Sodium = sodium_prop,
+    Carbs = carb_prop,
+    `Dietary \n Fiber` = dietFib_prop,
+    Sugar = sugar_prop,
+    Protein = protein_prop,
+    Fat = fat_prop,
+    `Add \n Sugar` = addedSugarall_prop
+  )
+
+# gut data
+gut.data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/relabeled_data/gut.lifestyle.merged.csv")
+gut.data <- gut.data %>% 
+  select(biome_id, logDate, shannon) %>% 
+  rename(gut_shannon=shannon)
+gut.data <- gut.data %>% 
+  group_by(biome_id) %>% 
+  summarise(`Avg Gut` = sum(gut_shannon) / n())
+shannon.diet.pairs <- shannon.diet_renamed %>% 
+  rename(`Avg Vag` = avg_shannon)
+shannon.diet.pairs <- shannon.diet.pairs %>% 
+  left_join(gut.data) %>% 
+  select(biome_id, `Avg Vag`, `Avg Gut`, everything())
+# shannon.diet.pairs
+
+# Diet: corr plots of macronutrients
+pairs(shannon.diet.pairs[,-c(1, 3, 13)], cex.labels = 2)
+pairs(shannon.diet.pairs[,-c(1, 2, 13)], cex.labels = 2)
+
+## Regressions
+lm.obj <- lm(avg_shannon ~ ., data=shannon.diet[, -1])
+summary(lm.obj)
+
+library(car)
+car::vif(lm.obj)
 
 # # regress the nutrients on CST
 # library(nnet)
@@ -543,53 +631,122 @@ pairs(macronutrients_renamed[,-c(9,10)])
 # )
 # summary(model)
 
-head(nutrient.diet.22.microbiome.subset)
+# attempt 4
+library(mclogit)
+library(performance)
+library(lme4)
 
-## visualize significant nutrients
-# dietary fiber
-ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = dietFib_prop)) +
-  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
-  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
-  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
-  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
-  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
-  labs(title = "", x = "Dietary Fiber Intake", y = "Predicted Probability")
+#identify the categorical variables in the data set
+nutrient.diet.22.microbiome$biome_id <- as.factor(nutrient.diet.22.microbiome$biome_id)
+nutrient.diet.22.microbiome$CST <- as.factor(nutrient.diet.22.microbiome$CST)
+# nutrient.diet.22.microbiome$cholesterol_prop <- as.factor(nutrient.diet.22.microbiome$cholesterol_prop)
 
-# carbs
-ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = carb_prop)) +
-  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
-  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
-  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
-  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
-  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
-  labs(title = "", x = "Carbohydrate Intake", y = "Predicted Probability")
+# mblogit
+result_multinomial <- mblogit(formula = CST ~ cholesterol_prop+satFat_prop+sodium_prop+carb_prop+
+                                dietFib_prop+sugar_prop+protein_prop+fat_prop+satfat_prop_fat+fat_cal_prop,
+                              data = nutrient.diet.22.microbiome,
+                              random =~ 1|`biome_id`)
+summary(result_multinomial)
 
-# cholesterol_prop
-ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = cholesterol_prop)) +
-  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
-  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
-  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
-  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
-  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
-  labs(title = "", x = "Cholesterol Intake", y = "Predicted Probability")
+#calculate r^2
+r2(result_multinomial)
 
-# sugar_prop
-ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = sugar_prop)) +
-  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
-  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
-  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
-  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
-  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
-  labs(title = "", x = "Sugar Intake", y = "Predicted Probability")
+# #####
+# nutrient.diet.22.microbiome_clean <- na.omit(nutrient.diet.22.microbiome[, c("CST", "cholesterol_prop", "biome_id", "dietFib_prop")])
+# nutrient.diet.22.microbiome_clean$CST <- as.factor(nutrient.diet.22.microbiome_clean$CST)
+# nutrient.diet.22.microbiome_clean$biome_id <- as.numeric(nutrient.diet.22.microbiome_clean$biome_id)
+# 
+# nutrient.diet.22.microbiome_clean_long <- nutrient.diet.22.microbiome %>%
+#   group_by(biome_id) %>%
+#   mutate(choice_set = row_number()) %>%
+#   ungroup()
+# 
+# nutrient.diet.22.microbiome_clean_long <- nutrient.diet.22.microbiome 
+# 
+# # For example, make binary columns representing each choice level (e.g., "I", "II", "III")
+# nutrient.diet.22.microbiome_clean_long$CST_I <- ifelse(nutrient.diet.22.microbiome_clean_long$CST == "I", 1, 0)
+# nutrient.diet.22.microbiome_clean_long$CST_II <- ifelse(nutrient.diet.22.microbiome_clean_long$CST == "II", 1, 0)
+# nutrient.diet.22.microbiome_clean_long$CST_III <- ifelse(nutrient.diet.22.microbiome_clean_long$CST == "III", 1, 0)
+# nutrient.diet.22.microbiome_clean_long$CST_IV <- ifelse(nutrient.diet.22.microbiome_clean_long$CST == "IV", 1, 0)
+# nutrient.diet.22.microbiome_clean_long$CST_V <- ifelse(nutrient.diet.22.microbiome_clean_long$CST == "V", 1, 0)
+# 
+# # biome_counts <- nutrient.diet.22.microbiome_clean_long %>%
+# #   group_by(biome_id) %>%
+# #   tally()
+# nutrient.diet.22.microbiome_clean_long_filtered <- nutrient.diet.22.microbiome_clean_long %>%
+#   filter(biome_id %in% biome_counts$biome_id[biome_counts$n >= 20])
+# # table(nutrient.diet.22.microbiome_clean_long_filtered$biome_id)
+# nutrition.mixed <- mblogit(cbind(CST_I, CST_II, CST_III, CST_IV, CST_V) ~ cholesterol_prop +
+#                              satFat_prop +
+#                              sodium_prop + carb_prop + dietFib_prop +
+#                              sugar_prop + protein_prop + fat_prop, #| biome_id,
+#                            random = ~ 1 | biome_id,
+#                            data = nutrient.diet.22.microbiome_clean_long_filtered,
+#                            control = mmclogit.control(inner.optimizer = 'BFGS'))
+# 
+# nutrient.diet.22.microbiome_clean_long %>%
+#   group_by(biome_id) %>%
+#   summarise(mean_chol = mean(cholesterol_prop, na.rm = TRUE),
+#             sd_chol = sd(cholesterol_prop, na.rm = TRUE)) %>%
+#   arrange(desc(sd_chol))
+# nutrient.diet.22.microbiome_clean_long %>%
+#   group_by(biome_id) %>%
+#   summarise(across(c(cholesterol_prop, satFat_prop, sodium_prop, carb_prop, dietFib_prop, sugar_prop, protein_prop, fat_prop),
+#                    list(mean = mean, sd = sd), na.rm = TRUE))
+# cor(nutrient.diet.22.microbiome_clean_long[, c("cholesterol_prop", "satFat_prop", "sodium_prop", "carb_prop", "dietFib_prop", "sugar_prop", "protein_prop", "fat_prop")], use = "complete.obs")
+# 
+# # Check the summary of the model
+# summary(nutrition.mixed)
+# mclogit::getSummary.mblogit(nutrition.mixed)
+# 
+# names(nutrition.mixed)
+# nutrition.mixed$formula
 
-# protein_prop
-ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = protein_prop)) +
-  geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
-  geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
-  geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
-  geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
-  geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
-  labs(title = "", x = "Protein Intake", y = "Predicted Probability")
+# ## visualize significant nutrients
+# # dietary fiber
+# ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = dietFib_prop)) +
+#   geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+#   geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+#   geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+#   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+#   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+#   labs(title = "", x = "Dietary Fiber Intake", y = "Predicted Probability")
+# 
+# # carbs
+# ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = carb_prop)) +
+#   geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+#   geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+#   geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+#   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+#   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+#   labs(title = "", x = "Carbohydrate Intake", y = "Predicted Probability")
+# 
+# # cholesterol_prop
+# ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = cholesterol_prop)) +
+#   geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+#   geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+#   geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+#   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+#   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+#   labs(title = "", x = "Cholesterol Intake", y = "Predicted Probability")
+# 
+# # sugar_prop
+# ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = sugar_prop)) +
+#   geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+#   geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+#   geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+#   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+#   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+#   labs(title = "", x = "Sugar Intake", y = "Predicted Probability")
+# 
+# # protein_prop
+# ggplot(nutrient.diet.22.microbiome_pred_probs, aes(x = protein_prop)) +
+#   geom_line(aes(y = pred_probs[,1], color = "CST 1")) +
+#   geom_line(aes(y = pred_probs[,2], color = "CST 2")) +
+#   geom_line(aes(y = pred_probs[,3], color = "CST 3")) +
+#   geom_line(aes(y = pred_probs[,4], color = "CST 4")) +
+#   geom_line(aes(y = pred_probs[,5], color = "CST 5")) +
+#   labs(title = "", x = "Protein Intake", y = "Predicted Probability")
 
 ##########################################################################################
 
@@ -622,8 +779,13 @@ nutrient.diet.22.day <- merged_diet_data %>% # past_two_days_diet_data %>% #
 nutrient.diet.22.day.microbiome <- shannon.cst.qr.merged.24 %>% 
   left_join(nutrient.diet.22.day, by = c("biome_id", "logDate"))
 
-nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome %>% 
-  group_by(biome_id) #%>% 
+# nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome %>% 
+#   group_by(biome_id) %>% 
+#   filter(!is.na(caloriesall_avg)) 
+nutrient.diet.22.day.microbiome.filtered <- na.omit(nutrient.diet.22.day.microbiome[,c(3,4,5,13:23)])
+dim(nutrient.diet.22.day.microbiome.filtered)
+
+#%>% 
   # filter(n() > 10)
 table(nutrient.diet.22.day.microbiome.filtered$biome_id)
 
@@ -632,6 +794,12 @@ table(nutrient.diet.22.day.microbiome.filtered$biome_id)
 # num participants
 length(unique(nutrient.diet.22.day.microbiome.filtered$biome_id))
 
+# null model
+lmer.null <- lmer(shannon~(1|`biome_id`), 
+                  data = nutrient.diet.22.day.microbiome.filtered)
+summary(lmer.null)
+r2(lmer.null)
+
 # Full model 
 lmer.full <- lmer(shannon~caloriesall_avg+cholesterol_prop+satFat_prop+
                     sodium_prop+carb_prop+dietFib_prop+sugar_prop+
@@ -639,6 +807,8 @@ lmer.full <- lmer(shannon~caloriesall_avg+cholesterol_prop+satFat_prop+
                   data = nutrient.diet.22.day.microbiome.filtered)
 summary(lmer.full)
 r2(lmer.full)
+
+anova(lmer.null, lmer.full)
 
 # vaginal.microbial.menses.24.veg
 nutrient.diet.22.day.microbiome.filtered <- nutrient.diet.22.day.microbiome.filtered %>% 
@@ -689,7 +859,7 @@ summary(lmer.fat    )
 summary(lmer.fat.cal)
 summary(lmer.addsug )
 
-## Random slopes model, different slope, different intercept
+## Random slopes model, different slope, different intercept - doesn't converge
 
 # Full model (no avg cal)
 # rs_full_model <- lmer(shannon~cholesterol_prop+(cholesterol_prop|`biome_id`) +
@@ -827,7 +997,7 @@ sample_data(genus.ra) <- sample_data(genus.ra.nutrient.merged)
 # ordination
 genus.ordination <- ordinate(genus.ra, method = "PCoA", distance = "bray")
 
-# Diet: ordincation cluster by vegetarian
+# Diet: ordination cluster by vegetarian
 plot_ordination(genus.ra, genus.ordination, color = "is_vegetarian") + 
   geom_point(size=3) +
   labs(color="Vegetarian Status")+
@@ -908,6 +1078,116 @@ plot(y=nutrient.diet$shannon, x= log((nutrient.diet$fat_prop)/(1-(nutrient.diet$
 plot(y=nutrient.diet$shannon, x= log((nutrient.diet$fat_cal_prop)/(1-(nutrient.diet$fat_cal_prop)))) # nutrient.diet$fat_cal_prop)
 plot(y=nutrient.diet$shannon, x=log((nutrient.diet$addedSugarall_prop)/(1-(nutrient.diet$addedSugarall_prop))))
 
+##########################################################################################
 
+## Genus level analysis
 
+genus.otu <- as.data.frame(t(otu_table(genus.ra)))
+genus.meta <- as.data.frame(sample_data(genus.ra))
+genus.meta$protein_prop <- as.numeric(genus.meta$protein_prop)
+
+# merge meta data and ra
+merged_df <- cbind(genus.meta, genus.otu)
+
+cor_results <- cor(genus.otu[rownames(genus.otu), ], 
+                   merged_df$protein_prop, method = "spearman", use = "pairwise.complete.obs")
+
+# Spearman corr between diet variables and rel abundances
+cor_results <- cor(merged_df[colnames(otu_table(genus.ra)),], merged_df$protein_prop, method = "spearman")
+
+cor_df <- as.data.frame(cor_results)
+cor_df$Genus <- rownames(cor_df)
+
+# Heatmap of genus-diet correlations
+ggplot(cor_df, aes(x = Genus, y = "Protein", fill = V1)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white") +
+  theme_minimal() +
+  labs(title = "Correlation of Genera with Macronutrient Proportions")
+
+##########################################################################################
+
+# Stacked bar plot and CST analysis
+
+num_bins <- 10
+genus.meta.df <- as(genus.meta, "data.frame")
+genus.meta.summary.df <- genus.meta.df %>%
+  mutate(protein_bin = cut(protein_prop, breaks = quantile(protein_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         cholesterol_bin = cut(cholesterol_prop, breaks = quantile(cholesterol_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         satFat_bin = cut(satFat_prop, breaks = quantile(satFat_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         sodium_bin = cut(sodium_prop, breaks = quantile(sodium_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         carb_bin = cut(carb_prop, breaks = quantile(carb_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         dietFib_bin = cut(dietFib_prop, breaks = quantile(dietFib_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         sugar_bin = cut(sugar_prop, breaks = quantile(sugar_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE),
+         fat_bin = cut(fat_prop, breaks = quantile(fat_prop, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE))
+
+# summarize cst abundance for bins
+cst_summary <- genus.meta.summary.df %>%
+  filter(!is.na(cholesterol_bin)) %>% 
+  group_by(cholesterol_bin, CST) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cholesterol_bin) %>%
+  mutate(percent = count / sum(count) * 100)
+
+ggplot(cst_summary, aes(x = cholesterol_bin, y = percent, fill = CST)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    x = "Cholesterol Proportion",
+    y = "CST Proportion (%)",
+    fill = "CST",
+    title = " "
+  ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# summarize cst abundance for bins
+cst_summary <- genus.meta.summary.df %>%
+  filter(!is.na(protein_bin)) %>% 
+  group_by(protein_bin, CST) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(protein_bin) %>%
+  mutate(percent = count / sum(count) * 100)
+
+ggplot(cst_summary, aes(x = protein_bin, y = percent, fill = CST)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    x = "Protein Proportion",
+    y = "CST Proportion (%)",
+    fill = "CST",
+    title = " "
+  ) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+ggplot(cst_summary, aes(x = protein_bin, y = percent, fill = CST)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    x = "Protein Proportion",
+    y = "CST Proportion (%)",
+    fill = "CST",
+    title = " "
+  ) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+ggplot(cst_summary, aes(x = protein_bin, y = percent, fill = CST)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    x = "Protein Proportion",
+    y = "CST Proportion (%)",
+    fill = "CST",
+    title = " "
+  ) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+colSums(is.na(nutrient.diet))
+dim(nutrient.diet)
+
+# 04/13 uncomment to save
+# write.csv(nutrient.diet, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/nutrient.diet.csv")
 

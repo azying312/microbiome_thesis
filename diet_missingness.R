@@ -15,6 +15,12 @@ ggplot(day_per_person, aes(x=factor(biome_id), y=days_recorded, fill="orchid")) 
   labs(x = "Participant ID", y = "Days Recorded", title = "Distribution of Days Recorded") +
   theme(legend.position = "none") 
 
+# meal missingness
+100 * sum(complete_days$meals_per_day) / (length(unique(complete_days$Date))*length(unique(complete_days$biome_id))*3)
+
+# day missingness
+100*(dim(complete_days)[1]) / (length(unique(complete_days$Date))*length(unique(complete_days$biome_id)))
+
 ### (2) how complete is the days (meals per day, calories per day, look at proportion of calories)
 complete_days <- diet_data %>%
   group_by(biome_id, Date) %>%

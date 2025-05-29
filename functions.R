@@ -104,7 +104,7 @@ heatmap_plot <- function(data){
     )
   
   # return plot
-  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), submission_days_count), fill = factor(value))) +
+  ggplot(heatmap_data, aes(x = study_day, y = reorder(factor(biome_id), submission_days_count), fill = factor(value))) +
     geom_tile(color = "black") +
     scale_fill_manual(
       values = c("1" = "red", "0" = "black", "99"="blue", "NA" = "white"),
@@ -120,7 +120,8 @@ heatmap_plot <- function(data){
     theme(
       axis.text.x = element_text(angle = 90, hjust = 1),
       panel.grid = element_blank()
-    )
+    ) +
+    scale_x_continuous(breaks = seq(0, max(lactobacillus_df$study_day), by = 5))
   
 }
 
@@ -141,8 +142,11 @@ heatmap_plot1 <- function(data){
   data <- data %>%
     mutate(
       menstruating_days_count = rowSums(
-        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        across(starts_with("2022-"), ~ . %in% c(0, 1, 99), .names = "temp")
         , na.rm = TRUE)
+      # menstruating_days_count = rowSums(
+      #   across(starts_with("2022-"), ~ . == 1, .names = "temp")
+      #   , na.rm = TRUE)
     )
 
   heatmap_data <- data %>%
@@ -156,24 +160,33 @@ heatmap_plot1 <- function(data){
       logDate = as.character(logDate)
     )
   
+  heatmap_data <- study_days(heatmap_data)
+  
   # return plot
-  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+  ggplot(heatmap_data, aes(x = study_day, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
     geom_tile(color = "black") +
     scale_fill_manual(
+      labels = c("1"="Menses", "0"="No Menses",
+                 "99"="Not Confirmed",
+                 "NA"="Missing"),
       values = c("1" = "red", "0" = "black", "99"="blue", "NA" = "white"),
       na.value = "white",
-      name = "Value"
+      name = "Menstruation Status"
     ) +
     labs(
       x = " ",
       y = " ",
-      title = " "
+      title = " ",
+      color = "Menstruation Status"
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 90, hjust = 1),
+      # axis.text.x = element_text(angle = 90, hjust = 1),
+      axis.text.x = element_text(angle = 0, hjust = 1),
+      text=element_text(size=15),
       panel.grid = element_blank()
-    )
+    ) +
+    scale_x_continuous(breaks = seq(0, max(heatmap_data$study_day), by = 5))
 
 }
 
@@ -194,7 +207,8 @@ heatmap_plot2 <- function(data){
   data <- data %>%
     mutate(
       menstruating_days_count = rowSums(
-        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        across(starts_with("2022-"), ~ !is.na(.), .names = "not_na_{.col}")
+        # across(starts_with("2022-"), ~ . == 1, .names = "temp")
         , na.rm = TRUE)
     )
   
@@ -208,17 +222,24 @@ heatmap_plot2 <- function(data){
     mutate(
       logDate = as.character(logDate)
     )
+  heatmap_data <- study_days(heatmap_data)
   
   # return plot
-  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+  ggplot(heatmap_data, aes(x = study_day, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
     geom_tile(color = "black") +
     scale_fill_manual(
+      labels = c("1"="Sample with Blood Only", "2"="Self-Report Menses Only",
+                 "3"="Both Sample with Blood and Self-Report Menses",
+                 "4"="Self-Report No Menses", "5"="Self-Report No Menses and Sample with No Blood", 
+                 "6"="Sample with No Blood", "7"="Sample with No Blood and Self-Report Menses", 
+                 "8"="No Sample and No Self-Report", "9"="Inconsistency, Changed to Menstraution",
+                 "10"="Inconsistency, Changed to Not Menstraution"),
       values = c("1" = "red3", "2" = "pink", "3"="darkred", "4"="darkblue", 
                  "5"="black","6"="blue",
                  "7"="red2", "8" = "white", # 8 is turned into NA
                  "9"="orchid", "10"="slateblue1"),
       na.value = "white",
-      name = "Value"
+      name = "Menstruation Status"
     ) +
     labs(
       x = " ",
@@ -227,9 +248,12 @@ heatmap_plot2 <- function(data){
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 90, hjust = 1),
-      panel.grid = element_blank()
-    )
+      axis.text.x = element_text(angle = 0, hjust = 1),
+      panel.grid = element_blank(),
+      text=element_text(size=15),
+      color="Menstruation Status"
+    ) +
+    scale_x_continuous(breaks = seq(0, max(heatmap_data$study_day), by = 5))
   
 }
 
@@ -250,7 +274,8 @@ heatmap_plot_fecal <- function(data){
   data <- data %>%
     mutate(
       menstruating_days_count = rowSums(
-        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        across(starts_with("2022-"), ~ !is.na(.), .names = "not_na_{.col}")
+        # across(starts_with("2022-"), ~ . == 1, .names = "temp")
         , na.rm = TRUE)
     )
   
@@ -264,28 +289,39 @@ heatmap_plot_fecal <- function(data){
     mutate(
       logDate = as.character(logDate)
     )
+  heatmap_data <- study_days(heatmap_data)
   
   # return plot
-  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+  ggplot(heatmap_data, aes(x = study_day, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
     geom_tile(color = "black") +
     scale_fill_manual(
+      labels = c("1"="Sample with Blood Only", "2"="Self-Report Menses Only",
+                 "3"="Both Sample with Blood and Self-Report Menses",
+                 "4"="Self-Report No Menses", "5"="Self-Report No Menses and Sample with No Blood", 
+                 "6"="Sample with No Blood", "7"="Sample with No Blood and Self-Report Menses", 
+                 "8"="No Sample and No Self-Report", "9"="Inconsistency, Changed to Menstraution",
+                 "10"="Inconsistency, Changed to Not Menstraution",
+                 "50"="Fecal Swab"),
       values = c("1" = "red3", "2" = "pink", "3"="darkred", "4"="darkblue", 
                  "5"="black","6"="blue",
                  "7"="red2", "8" = "white", # 8 is turned into NA
                  "9"="orchid", "10"="slateblue1", "50"="yellow"),
       na.value = "white",
-      name = "Value"
+      name = "Menstruation Status"
     ) +
     labs(
       x = " ",
       y = " ",
-      title = " "
+      title = " ",
+      text=element_text(size=15),
+      color="Menstruation Status"
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 90, hjust = 1),
+      axis.text.x = element_text(angle = 0, hjust = 1),
       panel.grid = element_blank()
-    )
+    ) +
+    scale_x_continuous(breaks = seq(0, max(heatmap_data$study_day), by = 5))
   
 }
 
@@ -306,7 +342,8 @@ heatmap_plot_imputation <- function(data){
   data <- data %>%
     mutate(
       menstruating_days_count = rowSums(
-        across(starts_with("2022-"), ~ . == 1, .names = "temp")
+        across(starts_with("2022-"), ~ !is.na(.), .names = "not_na_{.col}")
+        # across(starts_with("2022-"), ~ . == 1, .names = "temp")
         , na.rm = TRUE)
     )
   
@@ -321,28 +358,43 @@ heatmap_plot_imputation <- function(data){
       logDate = as.character(logDate)
     )
   
+  heatmap_data <- study_days(heatmap_data)
+  
   # return plot
-  ggplot(heatmap_data, aes(x = logDate, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
+  ggplot(heatmap_data, aes(x = study_day, y = reorder(factor(biome_id), menstruating_days_count), fill = factor(value))) +
     geom_tile(color = "black") +
     scale_fill_manual(
+      labels = c("1"="Sample with Blood Only", "2"="Self-Report Menses Only",
+                 "3"="Both Sample with Blood and Self-Report Menses",
+                 "4"="Self-Report No Menses", "5"="Self-Report No Menses and Sample with No Blood", 
+                 "6"="Sample with No Blood", "7"="Sample with No Blood and Self-Report Menses", 
+                 "8"="No Sample and No Self-Report", "9"="Inconsistency, Changed to Menstraution",
+                 "78"="Inconsistency, Changed to No Menstruation", "78"="Imputed Menses",
+                 "50"="Fecal Swab"),
       values = c("1" = "red3", "2" = "pink", "3"="darkred", "4"="darkblue", 
                  "5"="black","6"="blue",
                  "7"="red2", "8" = "white", # 8 is turned into NA
                  "9"="orchid", "10"="slateblue1", "50"="yellow",
                  "78"="purple"),
       na.value = "white",
-      name = "Value"
+      
+      name = "Menstruation Identification"
     ) +
     labs(
       x = " ",
       y = " ",
-      title = " "
+      title = " ",
+      text=element_text(size=15),
+      color="Menstruation Status"
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 90, hjust = 1),
-      panel.grid = element_blank()
-    )
+      axis.text.x = element_text(angle = 0, hjust = 1),
+      panel.grid = element_blank(),
+      text=element_text(size=15),
+      color="Menstruation Status"
+    ) +
+    scale_x_continuous(breaks = seq(0, max(heatmap_data$study_day), by = 5))
   
 }
 
