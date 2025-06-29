@@ -134,17 +134,19 @@ shannon.birthControl.avg <- shannon.birthControl %>%
             birthControl=first(birthControl))
   # distinct(biome_id, birthControl, shannon, .keep_all = TRUE)
 
+shannon.birthControl.avg$birthControl <- factor(shannon.birthControl.avg$birthControl, 
+                                               levels=c("None", "Local P", "Systemic P only", "Systemic Combined (E&P)"))
+
 # Birth Control: boxplot of birth control and avg shannon diversity
-ggplot(shannon.birthControl.avg, aes(x = birthControl, y = avg_shannon)) +
-  geom_jitter(aes(color=as.factor(biome_id)), size=1, alpha=0.6) +
-  # geom_point(aes(color=as.factor(biome_id)), size=1, alpha=0.7) +
+shannon.birthControl.avg %>% 
+  filter(!is.na(birthControl)) %>% 
+  ggplot(aes(x = birthControl, y = avg_shannon)) +
+  geom_jitter(aes(color=as.factor(biome_id)), size=2, alpha=1, show.legend = FALSE) +
   geom_boxplot(fill="skyblue", outlier.shape = NA, alpha = 0.1) +
-  # geom_text(aes(label = as.factor(biome_id)), vjust = -0.5, hjust=1.5, size = 1.5) +
-  scale_color_viridis_d(option="D") +
-  labs(x = "Contraceptive", y = "Average Shannon Diversity Index", title = "",
-       color = "Biome ID") +
-  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1),
-        legend.position = "none")
+  labs(x = "", y = "Average Shannon Diversity", title = "") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        text=element_text(size=20)) 
 
 # Birth Control: boxplot of shannon diversity by CST cluster
 ggplot(shannon.birthControl, aes(x = CST, y = shannon)) +
@@ -246,7 +248,7 @@ ggplot(dass, aes(x = as.factor(Timestamp), y = stress_score, group = as.factor(b
 
 shannon.birthControl.mod <- shannon.birthControl %>% 
   mutate(logDate = as.Date(logDate)) %>% 
-  select(-c(X, status))
+  dplyr::select(-c(X, status))
 
 # add stress severity
 dass$stressseverity[dass$stress_score>=0 & dass$stress_score<=14] <- 0
@@ -258,7 +260,7 @@ dass$stressseverity[dass$stress_score>=34] <- 4
 dass2 <- dass %>% 
   mutate(Timestamp = as.Date(Timestamp)) %>% 
   rename(mood_date = Timestamp) %>% 
-  select(biome_id, week, mood_date, stress_score, stressseverity, cisWoman, sport, probiotic, sexuallyActive)
+  dplyr::select(biome_id, week, mood_date, stress_score, stressseverity, cisWoman, sport, probiotic, sexuallyActive)
 
 shannon.dass <- shannon.birthControl.mod %>% # issue week variable shows up twice?
   left_join(dass2, by = c("biome_id")) %>%
@@ -805,9 +807,9 @@ table(shannon.birthControl$week)
 
 shannon.birthControl <- shannon.birthControl %>% 
   dplyr::select(!Timestamp)
-dass <- dass %>% 
-  dplyr::select(!biome_id) %>% 
-  rename(biome_id=study_id)
+# dass <- dass %>% 
+#   dplyr::select(!biome_id) %>% 
+#   rename(biome_id=study_id)
 
 # Collapse shannon.birthControl by week
 shannon.birthControl.collapsed <- shannon.birthControl %>% 
@@ -1154,10 +1156,6 @@ summary(lmer.obj4)
 # write.csv(shannon.dass.filtered, "/Volumes/T7/microbiome_data/cleaned_data/microbiome_lifestyle/dass.participant.csv")
 
 ##########################################################################################
-
-## Changes in Genus level analysis 
-
-
 
 
 

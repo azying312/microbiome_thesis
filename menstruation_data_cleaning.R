@@ -20,7 +20,7 @@ survey_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_Report
 uminn_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_uminn_data.csv", header=TRUE)
 # samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samples.csv", header=TRUE)
 # re labeled
-samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/cleaned_samplesv2.csv")
+samples_data <- read.csv("/Volumes/T7/microbiome_data/cleaned_data/relabeled_data/cleaned_samplesv2.csv")
 
 # Data Prep
 menses_data <- menses_data %>%

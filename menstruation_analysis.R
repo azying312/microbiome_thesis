@@ -28,7 +28,7 @@ dim(full_data_unique_combinations)
 length(unique(full_data_unique_combinations$logDate))
 
 survey_data <- survey_data_full %>% 
-  select(biome_id, survey_menstruate) #%>%
+  dplyr::select(biome_id, survey_menstruate) #%>%
   # rename(survey_menstruate=menstruate) # 14 no, 53 yes
 table(survey_data$survey_menstruate)
 
